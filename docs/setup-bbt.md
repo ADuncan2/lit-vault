@@ -18,7 +18,7 @@ library changes, and the pipeline reads that file.
    - Leave *Export Notes* and *Export Files* unticked — files are read from
      Zotero's own storage, never copied.
 4. Click OK and save it as **`library.json`** inside this repo's
-   `Code/Export_data/` folder (create the folder if needed). Any other path
+   `Code/Export_data/` folder. Any other path
    works too — put it in `Code/config.toml` under `[zotero] export`.
 5. Check it: *Zotero → Settings → Better BibTeX → Automatic export* should
    list the file, on change.
