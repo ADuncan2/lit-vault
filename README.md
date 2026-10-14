@@ -59,7 +59,10 @@ demand response?" or "refresh my lit vault".
 
 The `.gitignore` is safe by default: `Fulltext/` (publisher text extracted
 from your PDFs) and `Code/Export_data/` (paths from your computer) are never
-committed. Paper notes, tags, `papers.json` and your report history are.
+committed. Paper notes, tags, `papers.json`, your report history and
+`Code/config.toml` are — the config holds your Zotero folder path, but the
+search skill reads it (highlight colours, reading-notes vault) when it
+works from a GitHub clone.
 Keep your copy of the repo **private** — it holds your library's abstracts
 and your highlights. Setup can create a private GitHub repo for you so
 cloud and claude.ai sessions can reach the vault; it is optional.
@@ -69,7 +72,7 @@ cloud and claude.ai sessions can reach the vault; it is optional.
 Pull script updates from the template without touching your library:
 
 ```sh
-git remote add template https://github.com/OWNER/lit-vault.git   # once
+git remote add template https://github.com/ADuncan2/lit-vault.git   # once
 git pull template main
 ```
 
