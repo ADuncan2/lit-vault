@@ -1,0 +1,20 @@
+# --- lit-vault data policy (safe by default) ---
+# Full text extracted from your PDFs is publisher text: keep it out of git,
+# even in a private repo, unless you have decided otherwise. It is fully
+# regenerable from Zotero.
+Fulltext/
+# The Better BibTeX export holds absolute paths from your computer.
+Code/Export_data/
+# Reports are committed by default. Uncomment to keep your search history private.
+# Summaries/
+# lit-vault.html
+
+# Pipeline working data and logs (regenerable)
+Code/data/
+logs/
+
+# Tooling
+.obsidian/
+.venv/
+__pycache__/
+*.py[oc]

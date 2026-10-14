@@ -1,0 +1,8 @@
+[project]
+name = "lit-vault"
+version = "0.1.0"
+description = "Turn a Zotero library into a deterministic, agent-legible literature vault"
+requires-python = ">=3.11"
+dependencies = [
+    "pypdf==6.12.1",      # pinned: recorded in every Fulltext/ file
+]

@@ -1,0 +1,44 @@
+# lit-vault pipeline config. Copy to config.toml (the setup skill does this
+# for you) and edit. Relative paths resolve against Code/. Every script
+# reads this; CLI flags override individual values. Forward slashes work
+# on every platform, including Windows.
+
+[zotero]
+# Zotero data directory — Zotero → Settings → Advanced → Files and Folders
+# → "Data Directory Location". Holds zotero.sqlite (read for highlights,
+# never written) and storage/ (the PDFs).
+#   Windows: "C:/Users/you/Zotero"   macOS: "/Users/you/Zotero"
+#   Linux:   "/home/you/Zotero"
+data_dir       = "C:/Users/you/Zotero"
+# Better BibTeX JSON export of the whole library (see docs/setup-bbt.md).
+export         = "Export_data/library.json"
+# Key papers get full text by default. Either marker works; "" disables it.
+key_tag        = "key-paper"
+key_collection = "Key papers"
+
+# Optional: your own Obsidian vault of reading notes. When set, papers you
+# have a note on get a ✎ marker and a link to that note. Leave path = ""
+# (or delete the section) to run without one; nothing else changes.
+[main_vault]
+path       = ""                   # e.g. "C:/Users/you/Documents/My vault"
+vault_name = ""                   # as Obsidian knows it, for obsidian:// links; "" = folder name
+# Folders (relative to the vault) holding literature notes. [""] scans the
+# whole vault; any note with a `citekey:` frontmatter field counts.
+lit_notes  = [""]
+exclude    = ["Templates", ".obsidian", ".trash"]
+
+[tags]
+related_tags = 8                  # co-occurring tags listed per tag note
+
+# Zotero highlight colour -> heading in paper notes, in the order listed.
+# These are Zotero's default colours with a suggested meaning for each —
+# a convention, not a requirement. Rename the headings to match how you
+# highlight. Keep the ⛔ emoji on whichever heading holds your doubts and
+# caveats: the search skill always surfaces those when it uses a paper.
+# Colours not listed here still appear, under "Other highlights".
+[highlights]
+"#5fb236" = "💡 Main ideas, contributions and conclusions"   # green
+"#2ea8e5" = "❔ Questions"                                     # blue
+"#ffd400" = "⭐ Important"                                     # yellow
+"#a28ae5" = "🧩 Definitions and concepts"                     # purple
+"#ff6666" = "⛔ Weaknesses and caveats"                       # red

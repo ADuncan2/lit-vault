@@ -1,0 +1,3 @@
+# Generated files are written with LF; keep them LF on checkout so
+# 04_build_vault.py sees unchanged files as unchanged.
+* text=auto eol=lf
