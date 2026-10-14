@@ -73,8 +73,12 @@ Pull script updates from the template without touching your library:
 
 ```sh
 git remote add template https://github.com/ADuncan2/lit-vault.git   # once
-git pull template main
+git pull --allow-unrelated-histories template main                # first time
+git pull template main                                             # after that
 ```
+
+A copy made with *Use this template* starts its own history, hence the
+flag on the first pull.
 
 ## Uninstall
 
