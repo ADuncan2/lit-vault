@@ -10,7 +10,7 @@ FAILed, else 0.
 Stdlib only, so it runs before `uv sync` and on a bare clone.
 
 Modes:
-  (default)        config, export, build and report checks
+  (default)        config, export, build, semantic-index and report checks
   --prereqs        only the prerequisites: Python, uv, Zotero running,
                    Better BibTeX installed (setup step 1, before any config)
   --compare OLD    also report the library delta against an earlier
@@ -33,7 +33,7 @@ from pathlib import Path
 
 from lib.bbt import get_citekey, get_item_type, load_bibtex_export
 from lib.config import CONFIG_PATH, load_config
-from lib.store import CORPUS_PATH, ROOT, read_jsonl
+from lib.store import CORPUS_PATH, DATA_DIR, ROOT, read_json, read_jsonl
 
 ZOTERO_PING = "http://127.0.0.1:23119/connector/ping"
 BBT_PROBE = "http://127.0.0.1:23119/better-bibtex/cayw?probe=true"
@@ -41,6 +41,8 @@ SKIP_ITEM_TYPES = {"note", "annotation", "attachment"}  # as 01_build_corpus.py
 ITEM_URI_RE = re.compile(r"^zotero://select/(library|groups/\d+)/items/[A-Z0-9]{8}$")
 PDF_URI_RE = re.compile(r"^zotero://open-pdf/(library|groups/\d+)/items/[A-Z0-9]{8}$")
 COLOUR_RE = re.compile(r"^#[0-9a-f]{6}$")
+# stdlib-only, so read the manifest directly rather than import lib.semantic
+SEMANTIC_MANIFEST = DATA_DIR / "semantic_manifest.json"
 
 
 class Report:
@@ -240,6 +242,23 @@ def check_build(rep: Report, cfg) -> dict | None:
     return pj
 
 
+def check_semantic(rep: Report) -> None:
+    """Optional index: report its manifest status, never FAIL."""
+    rep.section("Semantic index (optional)")
+    m = read_json(SEMANTIC_MANIFEST, {}) or {}
+    status = m.get("status")
+    if status is None:
+        rep.info("not set up — see [semantic] in config.example.toml")
+    elif status == "ok":
+        rep.ok(f"{m.get('papers')} papers, {m.get('chunks')} chunks, "
+               f"{m.get('embed_model')}")
+    elif status == "stale":
+        rep.warn("index is stale (model or settings changed)",
+                 "uv run python scripts/06_build_semantic_index.py --force")
+    else:
+        rep.info(f"off ({status}): {m.get('message', '')}")
+
+
 def check_reports(rep: Report) -> None:
     rep.section("Reports")
     for rel in ("Code/scripts/render_report.py", "Code/templates/survey.template.html"):
@@ -293,6 +312,7 @@ def main() -> int:
     if not args.prereqs:
         cfg = check_config(rep, args.max_export_age)
         pj = check_build(rep, cfg)
+        check_semantic(rep)
         check_reports(rep)
         if args.compare and pj is not None:
             compare(args.compare, pj)

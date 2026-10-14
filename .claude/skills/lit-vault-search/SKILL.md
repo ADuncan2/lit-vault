@@ -99,6 +99,14 @@ description, so adapt to what is actually there.
   each page. N is the physical page index (what Zotero's `?page=` uses),
   not the printed page number. References are stripped. Usually only key
   papers have full text.
+- **Semantic index** (optional, not part of the vault) — an embedding
+  index over `Fulltext/` pages in `Code/data/`. Read
+  `Code/data/semantic_manifest.json` once: `"status": "ok"` and a shell on
+  the computer that holds the vault means it is **on**. Anything else —
+  file missing, another status, or no local shell (a GitHub clone, a cloud
+  session) — means **off**: carry on with the keyword funnel and say
+  "semantic index: off (<status or reason>)" in the trail. Never treat it
+  as an error, never retry, never try to build it.
 
 ## 3. The funnel
 
@@ -115,7 +123,14 @@ relevant tags (check the matching `Tags/` notes for related tags). Print
 compact lines — citekey, year, markers, title, first ~150 chars of
 abstract — and judge relevance from those. Tag notes are a shortcut, never
 the boundary: untagged papers are reached only through the term search.
-Record the candidate count. Papers with an empty `abstract` cannot be
+If the semantic index is on, also run, from `Code/`,
+`uv run python scripts/semantic_search.py --query "<the user's question>"`
+— the question as asked, not each expanded term; the point is to stop
+depending on the expansion. Each output line is a hit (`citekey`, `page`,
+`score`, `preview`, `zotero_pdf_page`); a single `{"status": …}` line means
+it stood down — treat the index as off. Add the hits' papers to the
+union. Record the candidate count, and where each candidate came from:
+`keyword`, `tag`, `semantic`, or a combination. Papers with an empty `abstract` cannot be
 judged here: list them as "unchecked" rather than silently dropping or
 keeping them. Weight papers with `✎` or highlights first, then key papers
 (`◆`). Open the `Papers/` notes of kept papers that have ⛔ or ⭐
@@ -126,7 +141,12 @@ scan titles with grep on `INDEX.md`, then grep `-i "term1|term2"` over
 **Stage 3 — go deep, only if the task needs it.**
 - **Full text:** for long documents, search inside the `Fulltext/` file for
   the expanded terms rather than reading it all; the nearest
-  `<!-- page N -->` above a match gives the page.
+  `<!-- page N -->` above a match gives the page. A semantic hit already
+  names its page: open the file there.
+- **Related sections** (semantic index on):
+  `uv run python scripts/semantic_search.py --like CITEKEY:PAGE` lists
+  pages in *other* papers nearest to that page — use it to walk from one
+  relevant section to related ones.
 - **Reading notes** (if configured): for every kept paper marked `✎`, read
   the user's note (search the reading-notes vault for `citekey: <citekey>`).
 
@@ -161,8 +181,10 @@ or guess one.
 Label every substantive claim with where it comes from:
 `[abstract]`, `[full text p.N]`, `[my highlight p.N]` (the user's
 annotation), or `[my note]` (their reading note). Never present an
-abstract-level claim as a detailed finding. `INDEX.md` and tag notes are
-maps, never evidence.
+abstract-level claim as a detailed finding. `INDEX.md`, tag notes and
+semantic hits are maps, never evidence: a semantic hit is a lead to open
+`Fulltext/` at that page and cite the text there, and its `preview` is never
+quoted.
 
 ## 5. Show the search trail
 
@@ -174,7 +196,8 @@ Search trail
 - Vault: <route used>, built/committed <date>
 - Terms: <expanded list>
 - Tags used: <tags>
-- Candidates: N (search + tags) → kept M after abstracts
+- Semantic index: on | off (<reason>)
+- Candidates: N (keyword a, tag b, semantic c; overlaps counted once) → kept M after abstracts
 - Dropped: <one line on what was dropped and why>
 - Unchecked (no abstract): <citekeys, or none>
 - Read in full: <citekeys>; reading notes read: <citekeys, or "not configured">

@@ -4,5 +4,6 @@ version = "0.1.0"
 description = "Turn a Zotero library into a deterministic, agent-legible literature vault"
 requires-python = ">=3.11"
 dependencies = [
+    "numpy>=2.4.6",       # optional semantic index (06, semantic_search.py)
     "pypdf==6.12.1",      # pinned: recorded in every Fulltext/ file
 ]

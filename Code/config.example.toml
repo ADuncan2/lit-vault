@@ -42,3 +42,20 @@ related_tags = 8                  # co-occurring tags listed per tag note
 "#ffd400" = "⭐ Important"                                     # yellow
 "#a28ae5" = "🧩 Definitions and concepts"                     # purple
 "#ff6666" = "⛔ Weaknesses and caveats"                       # red
+
+# Optional: a semantic (embedding) index over Fulltext/, so search can find
+# pages by meaning, not just by the words used. Needs Ollama running locally
+# (https://ollama.com) and, once,
+#   uv run python scripts/06_build_semantic_index.py --setup
+# which pulls the model (~270 MB). Without Ollama, step 06 and
+# semantic_search.py stand down and everything else works as before.
+[semantic]
+ollama_url   = "http://localhost:11434"
+embed_model  = "nomic-embed-text"   # pinned; its digest is recorded in the index
+doc_prefix   = "search_document: "  # nomic's task prefixes; "" for other models
+query_prefix = "search_query: "
+max_words    = 1000                 # split pages longer than this
+min_words    = 25                   # merge pages shorter than this
+k            = 12                   # hits per search
+min_score    = 0.45                 # drop hits below this; calibrate (Code/README.md)
+per_paper    = 3                    # at most this many hits from one paper

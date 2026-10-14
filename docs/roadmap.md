@@ -3,13 +3,12 @@
 Not promised — this is a personal tool shared as-is — but these are the
 directions already designed or under test.
 
-- **Semantic index over full text** *(under test, not yet in the
-  template).* An optional local embedding index (one chunk per `Fulltext/`
-  page, via Ollama) plus a `semantic_search.py` the search skill can use to
-  find passages keyword search misses. Hits are leads to open in
-  `Fulltext/`, never evidence in themselves. It will land here once it has
-  been evaluated against a gold set; until then the template is
-  keyword-and-tags only.
+- **Calibrated semantic defaults.** `[semantic] min_score` is a
+  placeholder: nomic scores bunch around 0.70–0.80, so 0.45 filters
+  nothing. A shipped evaluation script and better-founded defaults would
+  follow from a few people's gold sets.
+- **Semantic index over abstracts** for papers with no PDF, so hits are
+  not limited to the full-text tier.
 - **More report types.** `deep-dive` (one topic, full-text depth) and
   `paper` (one paper) beside `survey`; the renderer is already typed for
   them.

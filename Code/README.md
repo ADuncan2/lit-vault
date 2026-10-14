@@ -27,12 +27,13 @@ uv run python scripts/02_extract_fulltext.py    # highlights + full text of key 
 uv run python scripts/03_scan_my_notes.py       # optional reading-notes vault; no-op if not configured
 uv run python scripts/04_build_vault.py         # Home.md, INDEX.md, Tags/, Papers/
 uv run python scripts/05_build_papers_json.py   # papers.json at the vault root
+uv run python scripts/06_build_semantic_index.py  # optional; stands down without Ollama
 python scripts/doctor.py                        # checks; exit 1 on any failure
 ```
 
-Adding papers later: Zotero rewrites the export; re-run 01→05. Step 02
+Adding papers later: Zotero rewrites the export; re-run 01→06. Step 02
 only extracts PDFs it hasn't seen (`--force` re-extracts) but always
-refreshes highlights.
+refreshes highlights; step 06 only embeds new full text.
 
 Useful step-02 flags:
 
@@ -43,6 +44,35 @@ Useful step-02 flags:
 `doctor.py` flags: `--prereqs` (Python, uv, Zotero running, Better BibTeX
 installed — before any config exists), `--compare OLD_PAPERS_JSON` (prints
 `+N papers, M updated, K removed`), `--max-export-age DAYS`.
+
+### Semantic index (optional)
+
+Step 06 embeds one chunk per `Fulltext/` page (long pages split, near-empty
+ones merged) into `data/semantic_index.sqlite`, through a local
+[Ollama](https://ollama.com) model, and records its state in
+`data/semantic_manifest.json` — the file the search skill reads to decide
+whether to use it. Once, with Ollama running:
+`uv run python scripts/06_build_semantic_index.py --setup` (pulls
+`nomic-embed-text`, ~270 MB, then builds). After that each run embeds only
+new or re-extracted papers. Flags: `--measure` (what would be embedded),
+`--check` (refresh the status only), `--force` (rebuild after changing the
+model or chunk settings), `--citekey KEY`.
+
+Search it with:
+
+```sh
+uv run python scripts/semantic_search.py --query "how do operators plan under demand uncertainty"
+uv run python scripts/semantic_search.py --like someCitekey:12   # related pages in other papers
+```
+
+Hits are leads to open in `Fulltext/`, never evidence in themselves.
+Without Ollama both scripts print one status line and exit 0, and the
+vault builds identically.
+
+**Calibrating.** `min_score` in `[semantic]` drops weak hits. The default
+(0.45) is permissive — `nomic-embed-text` scores mostly fall between 0.70
+and 0.80. Try a few questions whose right papers you know, note the scores
+of right and wrong hits, and set `min_score` between them.
 
 ### Reports
 
@@ -71,7 +101,7 @@ them; `--repo OWNER/NAME` and `--linked-computer` add access routes.
 | `papers.json` | machine view of levels 1–2 | 05 |
 | `lit-vault.html` | latest report + dropdown of past ones | render_report |
 | `Summaries/` | every report: `YYYY-MM-DD--{type}--{slug}.json` + frozen `.html` | render_report |
-| `Code/data/` | corpus, highlights, notes map, manifest (gitignored) | 01–03 |
+| `Code/data/` | corpus, highlights, notes map, manifest, semantic index (gitignored) | 01–03, 06 |
 
 Every generated file carries `generated: true`. **Don't edit anything in
 the vault** — 04 rewrites `Papers/`, `Tags/`, `INDEX.md` and `Home.md` on

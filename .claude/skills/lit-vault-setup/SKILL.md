@@ -73,6 +73,25 @@ After `--measure`, tell the user the number of key papers and projected
 full-text size before extracting; `--tier all` (every PDF) is their call,
 not the default. Report the step-01 summary in one or two lines.
 
+### Optional: semantic index
+
+Offer once: "Also build a semantic index, so searches can find pages by
+meaning and not only by the words used? It needs Ollama (a free local
+model runner) and a ~270 MB model; it runs on your computer, and takes
+roughly a second per page on a CPU." Skip if they decline. If yes and
+Ollama isn't installed, give them https://ollama.com and wait. Then, from
+`Code/`:
+
+```
+uv run python scripts/06_build_semantic_index.py --measure
+uv run python scripts/06_build_semantic_index.py --setup
+```
+
+Tell them the chunk count from `--measure` before building (about one
+second per chunk). The index lives in `Code/data/` and is never
+committed. Without it everything works; with it, the search skill uses it
+automatically.
+
 ## 5. Verify
 
 Run `python Code/scripts/doctor.py`. Fix every FAIL using its hint and

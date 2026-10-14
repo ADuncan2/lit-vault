@@ -18,8 +18,10 @@ clone cannot rebuild (it has no Zotero). Run from the vault root:
 2. Rebuild, from `Code/`, stopping at the first failure:
    `uv run python scripts/01_build_corpus.py`, then
    `02_extract_fulltext.py`, `03_scan_my_notes.py`, `04_build_vault.py`,
-   `05_build_papers_json.py` (same `uv run python scripts/…` form).
-   Step 02 only extracts PDFs it has not seen; it also refreshes highlights.
+   `05_build_papers_json.py`, `06_build_semantic_index.py` (same
+   `uv run python scripts/…` form). Step 02 only extracts PDFs it has not
+   seen; it also refreshes highlights. Step 06 embeds only new full text
+   and stands down by itself if Ollama isn't running — not a failure.
 3. From the vault root: `python Code/scripts/doctor.py --compare <snapshot>`.
 4. Report in two or three lines: the delta line from the doctor
    (`+N papers, M updated, K removed`), any FAIL or WARN with its fix, and —

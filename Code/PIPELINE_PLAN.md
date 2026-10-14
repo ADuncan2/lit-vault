@@ -153,7 +153,8 @@ in the last third of the document.
 
 ## Pipeline (`Code/scripts/`)
 
-No step calls an LLM.
+No step calls an LLM. Step 06 calls a local embedding model, and only
+to build a retrieval index outside the vault (see *Semantic index*).
 
 | # | Script | Output |
 |---|--------|--------|
@@ -162,6 +163,8 @@ No step calls an LLM.
 | 03 | `03_scan_my_notes.py` | `data/my_notes.json` (empty without a main vault) |
 | 04 | `04_build_vault.py` | `Home.md`, `INDEX.md`, `Tags/`, `Papers/` |
 | 05 | `05_build_papers_json.py` | `papers.json` |
+| 06 | `06_build_semantic_index.py` | `data/semantic_index.sqlite`, `data/semantic_manifest.json` — optional, not part of the vault |
+| — | `semantic_search.py` | JSON Lines hits to stdout (run by the search skill) |
 | — | `doctor.py` | health checks; exit 1 on failure |
 | — | `render_report.py` | `lit-vault.html`, `Summaries/` (run by the search skill) |
 | — | `install_skills.py` | personalised global skills (run by setup, with consent) |
@@ -196,10 +199,54 @@ papers or tags that no longer exist. Never touches `Fulltext/` (owned by
 **05 — papers.json.** Parses the `Papers/` notes into one JSON file.
 Stdlib only.
 
+**06 — semantic index (optional).** See *Semantic index* below.
+
 Shared code in `scripts/lib/`: `bbt.py` (export parsing), `zotero_db.py`
 (annotations), `store.py` (paths, change-aware writes), `config.py`,
 `rawmd.py` (frontmatter and the full-text format), `schema.py` (the corpus
-record), `logutil.py`. The only third-party dependency is `pypdf`.
+record), `logutil.py`, `semantic.py` (step 06 and `semantic_search.py`).
+Third-party dependencies: `pypdf` (pinned) and `numpy` (semantic index).
+
+## Semantic index
+
+An optional embedding index over `Fulltext/`, so search can retrieve
+*pages* that are about a topic even when they use different words, and walk
+from one page to related pages in other papers. It is **retrieval-only and
+outside the vault**, so design decision 3 stands:
+
+1. **Derived, gitignored, regenerable.** `Code/data/semantic_index.sqlite`
+   and `semantic_manifest.json`; delete and rebuild any time.
+2. **Never evidence.** A hit locates a page; claims still cite the
+   `Fulltext/` text at that page. Previews are never quoted.
+3. **The vault build (01–05) never reads it.** A machine without Ollama
+   builds a byte-identical vault. Embeddings are not bit-reproducible
+   across models or hardware, which is why they live outside the vault.
+
+**Chunk = page.** Page markers map 1:1 onto `zotero://open-pdf/…?page=N`,
+so every hit is a clickable location. Pages over `max_words` split at
+paragraph boundaries into parts (same page number); pages under
+`min_words` merge into the next page's chunk. The chunker is versioned.
+
+**Infrastructure.** Ollama at `[semantic] ollama_url`, model
+`embed_model` (default `nomic-embed-text`, 768-dim, runs on CPU). The
+capability check (Ollama reachable, model pulled, numpy importable) writes
+`status: ok | no_ollama | no_model | no_numpy | stale | no_index` to the
+manifest; anything but `ok` makes step 06 and the search stand down with
+one line and exit 0. The model is only pulled by `06 --setup`.
+
+**Storage.** SQLite with float32 vectors as blobs; search is brute-force
+cosine similarity in numpy (~25k chunks for a 1,000-paper library is well
+under 100 ms). No vector database.
+
+**Incremental.** Keyed on each paper's full-text hash from
+`fulltext_manifest.json`; a new or re-extracted paper is re-embedded, a
+removed one pruned. A change of model, model digest or chunk settings
+marks the index `stale` and needs `--force` to rebuild.
+
+**Search** (`semantic_search.py`, JSON Lines out): `--query "…"` embeds
+the question; `--like CITEKEY:PAGE` uses that page's own vector, excluding
+its paper (works with Ollama down). `k`, `min_score` and `per_paper`
+(cap per paper, so one long paper can't flood the list) come from config.
 
 ## Key design decisions
 

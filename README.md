@@ -28,6 +28,10 @@ All four, no substitutes in this version:
 - **[Claude Code](https://docs.claude.com/en/docs/claude-code/overview)** (CLI, desktop or IDE) — the setup is a conversation
 - **[uv](https://docs.astral.sh/uv/getting-started/installation/)** — it installs the right Python for you
 
+Optional: **[Ollama](https://ollama.com)**, for a local semantic index over
+your full texts, so searches also find pages by meaning, not only by the
+words used. Setup offers it; everything works without it.
+
 ## Quickstart
 
 1. Click **Use this template** on GitHub (make the new repo **private**), or download it.
