@@ -26,9 +26,10 @@ stop until they say it's done. Do not install software for them.
 ## 2. Better BibTeX auto-export (the user does this)
 
 You cannot click Zotero's dialogs. Walk the user through
-`docs/setup-bbt.md` — whole-library export, format **Better BibTeX JSON**,
-**Keep updated** ticked, saved as `Code/Export_data/library.json` (or a path
-they prefer — note it for step 3). Then check the file exists and parses:
+`docs/setup-bbt.md` — the whole library or one collection, format
+**Better BibTeX JSON**, **Keep updated** ticked, saved as the only `.json`
+file in `Code/Export_data/` (any name), or at a path they prefer — note it
+for step 3. Then check the file exists and parses:
 `python -c "import json,sys; d=json.load(open(sys.argv[1],encoding='utf-8')); print(len(d['items']), 'items')" <path>`.
 
 ## 3. Config interview
@@ -40,7 +41,8 @@ questions at a time:
 - **Zotero data directory** — first look for `zotero.sqlite` in the usual
   place (`~/Zotero` on every OS) and propose it; otherwise ask them to read
   it from Zotero → Settings → Advanced → Files and Folders.
-- **Export path** — from step 2.
+- **Export path** — leave the default (the `Export_data` folder) if the
+  export is in `Code/Export_data/`; otherwise the file's full path.
 - **Key papers** — a tag or a collection that marks the papers worth full
   text (either or both; "" disables). Offer to list their most-used tags
   once step 4 has run if they're unsure; they can change it later.

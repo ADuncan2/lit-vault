@@ -60,7 +60,7 @@ def load_config(path: Path = CONFIG_PATH) -> Config:
     vault_path = mv.get("path", "")
     return Config(
         zotero_data=_resolve(zot.get("data_dir", "")),
-        export=_resolve(zot.get("export", "Export_data/library.json")),
+        export=_resolve(zot.get("export", "Export_data")),  # file or folder: lib.bbt.find_export
         key_tag=zot.get("key_tag", ""),
         key_collection=zot.get("key_collection", ""),
         main_vault=Path(vault_path) if vault_path else None,

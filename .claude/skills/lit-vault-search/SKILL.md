@@ -51,7 +51,8 @@ that works:
 
 If the vault exists but `INDEX.md` does not, it has not been built yet. As
 a stopgap, search titles and abstracts in the Better BibTeX export (the
-`export` path in `Code/config.toml`, usually under `Code/Export_data/`)
+`export` path in `Code/config.toml` — a file, or a folder, by default
+`Code/Export_data/`, holding the single `.json` export)
 with a short Python script, label every result "export only, pre-build",
 and suggest running the lit-vault-setup skill.
 

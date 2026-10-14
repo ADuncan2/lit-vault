@@ -1,7 +1,8 @@
 """
 01_build_corpus.py — build the canonical per-paper corpus from a BBT export.
 
-Parses a whole-library Better BibTeX JSON export into one PaperRecord per
+Parses a Better BibTeX JSON export (whole library or one collection —
+see lib.bbt.find_export for how the file is chosen) into one PaperRecord per
 usable item and writes Code/data/corpus.jsonl, sorted by citekey. No PDF
 work happens here — abstracts come straight from the export.
 
@@ -24,6 +25,7 @@ from dataclasses import asdict
 from lib.bbt import (
     collection_keys_by_name,
     collection_names,
+    find_export,
     get_abstract,
     get_authors,
     get_citekey,
@@ -124,8 +126,13 @@ def main():
 
     log = setup_logging(LOG_DIR, "build_corpus")
 
-    log.info("Loading %s", cfg.export)
-    export = load_bibtex_export(cfg.export)
+    try:
+        export_path = find_export(cfg.export)
+    except ValueError as e:
+        log.error("%s", e)
+        return 1
+    log.info("Loading %s", export_path)
+    export = load_bibtex_export(export_path)
     items = export["items"]
     log.info("Found %d items in export", len(items))
 
@@ -178,4 +185,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

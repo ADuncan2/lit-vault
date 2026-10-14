@@ -9,6 +9,25 @@ import re
 from pathlib import Path
 
 
+def find_export(path: Path) -> Path:
+    """The export file. `path` is the file itself, or a folder holding
+    exactly one .json export (any name; the whole library or a single
+    collection). Raises ValueError, with the fix, if that can't be decided."""
+    if not path.is_dir():
+        if path.exists():
+            return path
+        raise ValueError(f"export not found: {path}")
+    found = sorted(p for p in path.glob("*.json") if p.is_file())
+    if len(found) == 1:
+        return found[0]
+    if not found:
+        raise ValueError(f"no .json export in {path} — save the Better BibTeX "
+                         "JSON export there (docs/setup-bbt.md)")
+    raise ValueError(f"{len(found)} .json files in {path} "
+                     f"({', '.join(p.name for p in found)}) — keep only the one "
+                     "export to build from, or name it in [zotero] export")
+
+
 def load_bibtex_export(path: Path) -> dict:
     """Load the full export: returns {"items": [...], "collections": {...}}."""
     with open(path, encoding="utf-8") as f:

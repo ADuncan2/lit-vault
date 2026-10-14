@@ -31,7 +31,7 @@ import tomllib
 import urllib.request
 from pathlib import Path
 
-from lib.bbt import get_citekey, get_item_type, load_bibtex_export
+from lib.bbt import find_export, get_citekey, get_item_type, load_bibtex_export
 from lib.config import CONFIG_PATH, load_config
 from lib.store import CORPUS_PATH, DATA_DIR, ROOT, read_json, read_jsonl
 
@@ -130,16 +130,16 @@ def check_config(rep: Report, max_age: float):
                  "set [zotero] data_dir to Zotero → Settings → Advanced → "
                  "Files and Folders → Data Directory Location")
 
-    if cfg.export.exists():
+    try:
+        cfg.export = find_export(cfg.export)
         rep.ok(f"Better BibTeX export: {cfg.export}")
         age = (time.time() - cfg.export.stat().st_mtime) / 86400
         if age > max_age:
             rep.warn(f"export last written {age:.0f} days ago",
                      "fine if the library hasn't changed; otherwise check the "
                      "auto-export in Zotero → Settings → Better BibTeX → Automatic export")
-    else:
-        rep.fail(f"export not found: {cfg.export}",
-                 "set up the auto-export (docs/setup-bbt.md) or fix [zotero] export")
+    except ValueError as e:
+        rep.fail(str(e), "see docs/setup-bbt.md, or set [zotero] export in config.toml")
 
     mv = raw.get("main_vault", {}).get("path", "")
     if not mv:
@@ -179,7 +179,7 @@ def check_build(rep: Report, cfg) -> dict | None:
         return None
     corpus_keys = {r["citekey"] for r in corpus}
 
-    if cfg and cfg.export.exists():
+    if cfg and cfg.export.is_file():
         exp = export_citekeys(cfg)
         if exp is None:
             rep.fail(f"export does not parse as Better BibTeX JSON: {cfg.export}",

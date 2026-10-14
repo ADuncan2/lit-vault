@@ -172,7 +172,8 @@ to build a retrieval index outside the vault (see *Semantic index*).
 Every setting comes from `config.toml`; the scripts take only a few
 behaviour flags (`--tags-report`, `--measure`, `--tier`, `--force`, …).
 
-**01 — build corpus.** Parses the whole-library Better BibTeX JSON export
+**01 — build corpus.** Parses the Better BibTeX JSON export (whole library or
+one collection; a configured folder must hold exactly one `.json`)
 into one record per paper. Only manual tags (`type` absent or 0) are
 kept; automatic publisher keywords are ignored. A paper is
 a key paper if it carries `key_tag` or sits in `key_collection` (including

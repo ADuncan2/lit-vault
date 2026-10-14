@@ -10,8 +10,10 @@
 #   Windows: "C:/Users/you/Zotero"   macOS: "/Users/you/Zotero"
 #   Linux:   "/home/you/Zotero"
 data_dir       = "C:/Users/you/Zotero"
-# Better BibTeX JSON export of the whole library (see docs/setup-bbt.md).
-export         = "Export_data/library.json"
+# Better BibTeX JSON export — whole library or one collection (see
+# docs/setup-bbt.md). A folder means "the one .json file in it" (any name;
+# more than one is an error); or give the file's own path.
+export         = "Export_data"
 # Key papers get full text by default. Either marker works; "" disables it.
 key_tag        = "key-paper"
 key_collection = "Key papers"
