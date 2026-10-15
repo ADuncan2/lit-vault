@@ -51,6 +51,21 @@ related_tags = 8                  # co-occurring tags listed per tag note
 #   uv run python scripts/06_build_semantic_index.py --setup
 # which pulls the model (~270 MB). Without Ollama, step 06 and
 # semantic_search.py stand down and everything else works as before.
+# Optional: citation gap analysis (citation_gaps.py). After a search report,
+# it asks OpenAlex (free, no key) which papers the report's cluster
+# references, and which newer papers cite several of them, and lists the
+# ones missing from your Zotero library at the bottom of the report page.
+# Needs the network; without it the script stands down and everything else
+# works. The section itself is optional — these are the defaults.
+[openalex]
+mailto            = ""    # your email -> OpenAlex's faster "polite pool"; "" works
+max_per_direction = 10    # gap papers listed per direction
+min_cluster_cites = 2     # a citing paper must cite >= this many cluster papers
+timeout           = 30    # seconds per API call
+delay             = 0.15  # pause between calls (OpenAlex caps at 10/s)
+cache_days        = 30    # refetch cached paper metadata older than this
+max_forward_pages = 50    # cap on citing-works pages fetched (200 works each)
+
 [semantic]
 ollama_url   = "http://localhost:11434"
 embed_model  = "nomic-embed-text"   # pinned; its digest is recorded in the index

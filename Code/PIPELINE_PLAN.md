@@ -167,6 +167,7 @@ to build a retrieval index outside the vault (see *Semantic index*).
 | — | `semantic_search.py` | JSON Lines hits to stdout (run by the search skill) |
 | — | `doctor.py` | health checks; exit 1 on failure |
 | — | `render_report.py` | `lit-vault.html`, `Summaries/` (run by the search skill) |
+| — | `citation_gaps.py` | a "gaps" section added to an archived survey — optional, needs the network (see *Citation gaps*) |
 | — | `install_skills.py` | personalised global skills (run by setup, with consent) |
 
 Every setting comes from `config.toml`; the scripts take only a few
@@ -205,7 +206,9 @@ Stdlib only.
 Shared code in `scripts/lib/`: `bbt.py` (export parsing), `zotero_db.py`
 (annotations), `store.py` (paths, change-aware writes), `config.py`,
 `rawmd.py` (frontmatter and the full-text format), `schema.py` (the corpus
-record), `logutil.py`, `semantic.py` (step 06 and `semantic_search.py`).
+record), `logutil.py`, `semantic.py` (step 06 and `semantic_search.py`),
+`matching.py` (DOI/title normalisation and the library holdings set),
+`openalex.py` (OpenAlex client for `citation_gaps.py`).
 Third-party dependencies: `pypdf` (pinned) and `numpy` (semantic index).
 
 ## Semantic index
@@ -248,6 +251,37 @@ marks the index `stale` and needs `--force` to rebuild.
 the question; `--like CITEKEY:PAGE` uses that page's own vector, excluding
 its paper (works with Ollama down). `k`, `min_score` and `per_paper`
 (cap per paper, so one long paper can't flood the list) come from config.
+
+## Citation gaps
+
+An optional, network-backed follow-up to a search report
+(`citation_gaps.py`): given the cluster of papers a survey cites, the
+OpenAlex citation graph (free, keyless; `[openalex] mailto` joins the
+faster polite pool) yields two lists of papers **missing from the Zotero
+library**:
+
+- **backward** — works the cluster references, ranked by how many cluster
+  papers cite them (a gap in the retrospective literature);
+- **forward** — works citing at least `min_cluster_cites` cluster papers,
+  ranked the same way (follow-on work the library hasn't caught up with).
+
+Membership is decided deterministically against the full BBT export:
+normalised-DOI equality, with a normalised-title fallback only for items
+without a DOI (`lib/matching.py`). No LLM; ties break on global citation
+count, then OpenAlex ID. Both lists cap at `max_per_direction`.
+
+The result is written into the survey's own archived `review.json` as an
+optional top-level `"gaps"` block (candidates carry their metadata inline —
+they have no citekey, that being the point — plus an OpenAlex abstract),
+and the page is re-rendered in place: one extra "Beyond your library"
+section, cards linking to the DOI and OpenAlex rather than Zotero. Deleting
+the block and re-rendering removes the section.
+
+Like the semantic index, it is derived and optional: work metadata is
+cached with a TTL in the gitignored `Code/data/openalex_cache.json`
+(citation lists are always fetched fresh), and without the network the
+script stands down with one line and exit 0. The vault build (01–05) never
+touches it. A typical 15-paper cluster costs ~25–35 API calls (~10 s).
 
 ## Key design decisions
 

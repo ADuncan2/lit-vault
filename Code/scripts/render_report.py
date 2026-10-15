@@ -24,7 +24,9 @@ stable page):
 Two output modes, one page each: the archived page (frozen, never
 rewritten — later template changes do not touch it; re-render from its
 .json if ever wanted) and the stable page (rewritten every run; bookmark
-it). The slug comes from the topic; a second run with the same date, type
+it). One exception to frozen: rendering a .json that already lives in
+Summaries/ (citation_gaps.py augments one in place) keeps its stem and
+overwrites its page instead of archiving a copy. The slug comes from the topic; a second run with the same date, type
 and topic gets -2, -3, … The dropdown is built by scanning the archived
 .json files (newest first, label "YYYY-MM-DD · type · topic") and uses
 plain navigation, never fetch(), so it works from file://.
@@ -55,7 +57,12 @@ escapes them):
       ],
       "also": ["citekey", ...]         # compact one-line list, optional
     }
-  ]
+  ],
+  "gaps": { ... }                      # optional: written by citation_gaps.py,
+                                       # never by the agent. Renders as one
+                                       # extra section ("Beyond your library");
+                                       # delete the key and re-render to drop
+                                       # it. Schema in scripts/citation_gaps.py.
 }
 
 Usage:
@@ -169,6 +176,100 @@ def render_also(citekeys: list, papers: dict) -> str:
     </article>'''
 
 
+# -- gaps section (optional, written into the survey JSON by ---------------
+# -- citation_gaps.py; everything below this line up to validate_survey ----
+# -- is the modular seam — remove these two functions and their two call ----
+# -- sites to lift the feature out) -----------------------------------------
+
+def validate_gaps_block(gaps: dict, papers: dict) -> list:
+    """Errors in an optional review["gaps"] block. Gap candidates carry
+    their metadata inline and deliberately have no citekey."""
+    errors = []
+    for row in gaps.get("cluster", []):
+        if row.get("citekey") not in papers:
+            errors.append(f"gaps cluster: unknown citekey {row.get('citekey')!r}")
+    for direction in ("backward", "forward"):
+        seen = set()
+        for c in gaps.get(direction, []):
+            oid = c.get("openalex_id")
+            if not c.get("title") or not oid:
+                errors.append(f"gaps {direction}: candidate missing title "
+                              f"or openalex_id ({oid or c.get('title')!r})")
+            if not isinstance(c.get("cluster_count"), int) or c["cluster_count"] < 1:
+                errors.append(f"gaps {direction} {oid}: bad cluster_count")
+            if oid in seen:
+                errors.append(f"gaps {direction}: duplicate {oid}")
+            seen.add(oid)
+    return errors
+
+
+def render_gap_card(c: dict, verb: str, n_cluster: int) -> str:
+    """One paper found through the citation graph; metadata is inline
+    (no citekey — the whole point is that it is not in the library)."""
+    authors = ", ".join(c.get("authors", []))
+    if c.get("n_authors", 0) > len(c.get("authors", [])):
+        authors += " et al."
+    who = f'{esc(authors or "Unknown")} ({esc(c.get("year") or "n.d.")})'
+    chip = (f'<span class="chip">{esc(verb)} {c["cluster_count"]}/{n_cluster}</span>'
+            f'<span class="chip">Cited {c.get("cited_by_count", 0):,}×</span>')
+    if not c.get("doi"):
+        chip += '<span class="chip flag">No DOI</span>'
+    links = "\n".join(f'        <li>{esc(k)}</li>'
+                      for k in c.get("cluster_citekeys", []))
+    abstract = ""
+    if c.get("abstract"):
+        abstract = (f'<details class="abs"><summary>Abstract</summary>'
+                    f'<p>{esc(c["abstract"])}</p></details>')
+    acts = []
+    if c.get("doi"):
+        acts.append(f'<a class="primary" href="https://doi.org/{esc(c["doi"])}">DOI</a>')
+    acts.append(f'<a href="{esc(c["openalex_url"])}">OpenAlex</a>')
+    actions_html = "\n        ".join(acts)
+    return f'''    <article class="paper">
+      <div class="cite"><span class="who">{who}</span><span class="chips">{chip}</span></div>
+      <h3 class="title">{esc(c.get("title", ""))}</h3>
+      <p class="what"><span class="src">{esc(verb)} in this review:</span></p>
+      <ul class="srclist">
+{links}
+      </ul>
+      {abstract}
+      <div class="actions">
+        {actions_html}
+      </div>
+    </article>'''
+
+
+def render_gaps_section(gaps: dict) -> tuple:
+    """(section html, toc entry) for the "Beyond your library" section —
+    papers the citation graph connects to this review's cluster that are
+    missing from the Zotero library (found by citation_gaps.py)."""
+    n_cluster = sum(1 for r in gaps.get("cluster", []) if r.get("openalex_id"))
+    blocks = []
+    for direction, verb, head in (
+            ("backward", "Referenced by", "Referenced by this review's papers"),
+            ("forward", "Cites", "Citing this review's papers")):
+        cards = gaps.get(direction, [])
+        header = (f'    <article class="paper">\n      <div class="cite">'
+                  f'<span class="who">{esc(head)} — not in your library '
+                  f'({len(cards)})</span></div>\n    </article>')
+        blocks.append(header)
+        blocks.extend(render_gap_card(c, verb, n_cluster) for c in cards)
+    notes = list(gaps.get("notes", []))
+    p = gaps.get("params", {})
+    notes.append(f'OpenAlex, fetched {p.get("fetched", "?")}; forward gaps '
+                 f'cite ≥{p.get("min_cluster_cites", "?")} cluster papers; '
+                 f'top {p.get("max_per_direction", "?")} per direction by '
+                 'cluster count, then total citations.')
+    tail = "\n".join(f'    <p class="mine">{esc(n)}</p>' for n in notes)
+    n_total = len(gaps.get("backward", [])) + len(gaps.get("forward", []))
+    section = ('  <section id="gaps">\n    <h2>Beyond your library</h2>\n\n'
+               + "\n\n".join(blocks) + f"\n\n{tail}\n"
+               + '    <a class="top" href="#top">↑ contents</a>\n  </section>')
+    toc = (f'      <li><a href="#gaps">Beyond your library</a>'
+           f' <span class="n">{n_total}</span></li>')
+    return section, toc
+
+
 def validate_survey(review: dict, papers: dict) -> list:
     """Return error strings; warn (not fail) on same-title duplicates."""
     cited, missing, errors = [], [], []
@@ -187,6 +288,8 @@ def validate_survey(review: dict, papers: dict) -> list:
         seen.add(k)
     if missing:
         errors.append("unknown citekeys (not in papers.json): " + ", ".join(missing))
+    if review.get("gaps"):
+        errors.extend(validate_gaps_block(review["gaps"], papers))
     if errors:
         return errors
 
@@ -220,6 +323,11 @@ def render_survey(review: dict, papers: dict, now: datetime.datetime) -> tuple:
         n_total += n_group
         parts.append('    <a class="top" href="#top">↑ contents</a>\n  </section>')
         sections.append("\n\n".join(parts))
+
+    if review.get("gaps"):
+        gaps_section, gaps_toc = render_gaps_section(review["gaps"])
+        sections.append(gaps_section)
+        toc.append(gaps_toc)
 
     lede_tail = (
         ' "Open in Zotero" selects the item; "PDF" opens the reader, at the'
@@ -357,13 +465,21 @@ def main() -> int:
     stable = args.out.resolve()
     archive = stable.parent / ARCHIVE_DIR
     archive.mkdir(parents=True, exist_ok=True)
-    stem = archive_stem(archive, now.strftime("%Y-%m-%d"), rtype,
-                        slugify(review["topic"]))
+    # Re-rendering a review that already lives in the archive (e.g. after
+    # citation_gaps.py adds its block) keeps its stem and overwrites its
+    # page; anything else gets a fresh dated stem.
+    in_archive = args.review.resolve().parent == archive
+    if in_archive:
+        stem = args.review.resolve().stem
+    else:
+        stem = archive_stem(archive, now.strftime("%Y-%m-%d"), rtype,
+                            slugify(review["topic"]))
 
     archived_html = fill(tpl, {**values, "PAGE_KIND": "archived",
                                "TITLE": esc(review["topic"]),
                                "NAV": back_link(stable.name)})
-    shutil.copyfile(args.review, archive / f"{stem}.json")
+    if not in_archive:
+        shutil.copyfile(args.review, archive / f"{stem}.json")
     write(archive / f"{stem}.html", archived_html)
 
     stable_html = fill(tpl, {**values, "PAGE_KIND": "latest",

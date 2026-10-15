@@ -259,6 +259,13 @@ conventions: read the existing `lit-vault.html` first and keep its head,
 styles and structure. Say in chat that this run was hand-built and not
 archived.
 
+After a successful render, offer (one line) to run
+`uv run python scripts/citation_gaps.py` from `Code/` — it asks OpenAlex
+which papers this review's cluster references or is cited by that are
+missing from the Zotero library, and appends them to the same report page
+as a "Beyond your library" section (~10–30 s, network required; it stands
+down cleanly offline). Run it only on a yes.
+
 The chat answer with its search trail must stand on its own; the page is
 the clickable companion, not a replacement. End the chat answer with one
 line saying `lit-vault.html` was updated (and the archive name). If the

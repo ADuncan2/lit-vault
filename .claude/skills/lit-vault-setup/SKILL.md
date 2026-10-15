@@ -54,6 +54,10 @@ questions at a time:
   whether it matches how they highlight. Present it as a convention, not a
   rule; rename headings to their meaning. Keep the ⛔ emoji on whichever
   colour holds their doubts and caveats.
+- **OpenAlex email** (optional, one line) — `[openalex] mailto` joins
+  OpenAlex's faster "polite pool" for the citation-gaps feature
+  (`citation_gaps.py`, run after search reports). Any email works; ""
+  works too, just slower. Never fill it in without asking.
 
 Then run `python Code/scripts/doctor.py` and fix any Config FAIL before
 moving on (Build FAILs are expected at this point).

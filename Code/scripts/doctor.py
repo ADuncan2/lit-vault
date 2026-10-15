@@ -259,6 +259,25 @@ def check_semantic(rep: Report) -> None:
         rep.info(f"off ({status}): {m.get('message', '')}")
 
 
+def check_citation_gaps(rep: Report) -> None:
+    """Optional OpenAlex gap analysis: reachability and config, never FAIL."""
+    rep.section("Citation gaps (optional)")
+    if http_get("https://api.openalex.org/works?per-page=1") is None:
+        rep.info("off (OpenAlex not reachable) — citation_gaps.py stands down")
+        return
+    rep.ok("OpenAlex reachable")
+    try:
+        with open(CONFIG_PATH, "rb") as f:
+            oa = tomllib.load(f).get("openalex", {})
+    except OSError:
+        oa = {}
+    if oa.get("mailto"):
+        rep.ok(f"polite pool: {oa['mailto']}")
+    else:
+        rep.info("no [openalex] mailto set — works, but the polite pool is "
+                 "faster (config.example.toml)")
+
+
 def check_reports(rep: Report) -> None:
     rep.section("Reports")
     for rel in ("Code/scripts/render_report.py", "Code/templates/survey.template.html"):
@@ -313,6 +332,7 @@ def main() -> int:
         cfg = check_config(rep, args.max_export_age)
         pj = check_build(rep, cfg)
         check_semantic(rep)
+        check_citation_gaps(rep)
         check_reports(rep)
         if args.compare and pj is not None:
             compare(args.compare, pj)
