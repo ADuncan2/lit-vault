@@ -308,8 +308,11 @@ def main() -> int:
         notes += b_notes + f_notes
     except OpenAlexError as e:
         print(f"error: {e}", file=sys.stderr)
+        # a non-retryable status is a malformed request: retrying won't help
+        hint = ("this request is rejected every time — please report it"
+                if e.status is not None else "try again later")
         print("error: OpenAlex failed mid-run; nothing written (a partial "
-              "gaps report would mislead) — try again later", file=sys.stderr)
+              f"gaps report would mislead) — {hint}", file=sys.stderr)
         return 1
 
     gaps = {

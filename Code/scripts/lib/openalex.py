@@ -47,7 +47,13 @@ MAX_BACKWARD_RESOLVE = 500
 
 
 class OpenAlexError(Exception):
-    """A request that still failed after retries."""
+    """A request that still failed after retries. `status` is the HTTP code
+    of a non-retryable error (a malformed request: retrying cannot help),
+    or None when retries were exhausted on a transient failure."""
+
+    def __init__(self, message: str, status: int | None = None):
+        super().__init__(message)
+        self.status = status
 
 
 # ---------------------------------------------------------------------------
@@ -99,7 +105,8 @@ def _get_json(url: str, cfg: OpenAlexConfig):
                 return json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             if e.code not in (429, 500, 502, 503, 504):
-                raise OpenAlexError(f"HTTP {e.code} from OpenAlex: {url}") from e
+                raise OpenAlexError(f"HTTP {e.code} from OpenAlex: {url}",
+                                    status=e.code) from e
             last = e
             retry_after = e.headers.get("Retry-After")
         except (urllib.error.URLError, OSError, ValueError) as e:
@@ -286,16 +293,36 @@ def works_by_ids(ids: list, cfg: OpenAlexConfig, cache: dict, *,
     return out
 
 
+def _title_query(normalised_title: str) -> str:
+    """Title-search URL. Takes the normalised title: raw "," "|" and ":" are
+    OpenAlex filter syntax even when percent-encoded (it decodes before
+    parsing), and the match in work_by_title is normalised anyway.
+
+    >>> from .matching import normalize_title
+    >>> url = _title_query(normalize_title("Flexibility: markets, networks | homes"))
+    >>> url.split("&")[0]
+    'https://api.openalex.org/works?filter=title.search:flexibility%20markets%20networks%20homes'
+    """
+    q = urllib.parse.quote(normalised_title)
+    return (f"{API}/works?filter=title.search:{q}"
+            f"&select={WORK_SELECT},referenced_works&per-page=5")
+
+
 def work_by_title(title: str, cfg: OpenAlexConfig) -> dict | None:
     """The work whose normalised title exactly equals the query's, or None.
-    Deliberately never fuzzy — a wrong work would poison both passes."""
+    Deliberately never fuzzy — a wrong work would poison both passes.
+    A 4xx on the lookup leaves this one paper unresolved rather than
+    aborting the run; transient failures still raise."""
     from .matching import normalize_title
     want = normalize_title(title)
     if not want:
         return None
-    q = urllib.parse.quote(title)
-    data = _get_json(f"{API}/works?filter=title.search:{q}"
-                     f"&select={WORK_SELECT},referenced_works&per-page=5", cfg)
+    try:
+        data = _get_json(_title_query(want), cfg)
+    except OpenAlexError as e:
+        if e.status is not None and 400 <= e.status < 500 and e.status != 429:
+            return None
+        raise
     for w in data.get("results", []):
         if normalize_title(w.get("title")) == want:
             w = dict(w)
