@@ -51,7 +51,7 @@ from lib.store import (
     write_json,
     write_jsonl,
 )
-from lib.zotero_db import fetch_all_annotations, open_zotero_db
+from lib.zotero_db import fetch_all_annotations, item_ref, open_zotero_db
 
 EXTRACTOR = f"pypdf {pypdf.__version__}"
 MIN_CHARS_PER_PAGE = 100  # below this the PDF is probably a scan
@@ -111,19 +111,16 @@ def page_status(pages: list[str]) -> str:
 # ---------------------------------------------------------------------------
 
 def update_annotations(corpus: list[dict], zotero_data: Path, log) -> None:
-    conn = open_zotero_db(zotero_data)
-    if conn is None:
-        log.warning("Could not open zotero.sqlite in %s — annotations.jsonl "
-                    "left unchanged", zotero_data)
-        return
-    try:
+    with open_zotero_db(zotero_data) as conn:
+        if conn is None:
+            log.warning("Could not open zotero.sqlite in %s — annotations.jsonl "
+                        "left unchanged", zotero_data)
+            return
         by_item = fetch_all_annotations(conn)
-    finally:
-        conn.close()
 
     rows = []
     for r in corpus:  # corpus is sorted by citekey
-        anns = by_item.get(r["zotero_key"])
+        anns = by_item.get(item_ref(r.get("library", "library"), r["zotero_key"]))
         if anns:
             rows.append({"citekey": r["citekey"], "annotations": anns})
     write_jsonl(ANNOTATIONS_PATH, rows)

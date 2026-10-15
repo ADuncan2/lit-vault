@@ -4,9 +4,9 @@
 Parses every committed Papers/@{citekey}.md note and writes papers.json at
 the vault root: one object per paper with the frontmatter fields an agent
 needs (title, authors, year, tags, markers, Zotero URIs), a precomputed
-`display_author` ("Gust et al."), the abstract text, and the names of any
+`display_author` ("Smith et al."), the abstract text, and the names of any
 highlight sections. Agents and the summary renderer consume this file
-instead of re-parsing 1,000+ markdown notes per session — parsing happens
+instead of re-parsing hundreds of markdown notes per session — parsing happens
 once, here, so author-format bugs can't recur downstream.
 
 Like the rest of the build it is deterministic and fully rewritten on every

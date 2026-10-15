@@ -31,13 +31,13 @@ import tomllib
 import urllib.request
 from pathlib import Path
 
-from lib.bbt import find_export, get_citekey, get_item_type, load_bibtex_export
+from lib.bbt import (SKIP_ITEM_TYPES, find_export, get_citekey, get_item_type,
+                     load_bibtex_export)
 from lib.config import CONFIG_PATH, load_config
 from lib.store import CORPUS_PATH, DATA_DIR, ROOT, read_json, read_jsonl
 
 ZOTERO_PING = "http://127.0.0.1:23119/connector/ping"
 BBT_PROBE = "http://127.0.0.1:23119/better-bibtex/cayw?probe=true"
-SKIP_ITEM_TYPES = {"note", "annotation", "attachment"}  # as 01_build_corpus.py
 ITEM_URI_RE = re.compile(r"^zotero://select/(library|groups/\d+)/items/[A-Z0-9]{8}$")
 PDF_URI_RE = re.compile(r"^zotero://open-pdf/(library|groups/\d+)/items/[A-Z0-9]{8}$")
 COLOUR_RE = re.compile(r"^#[0-9a-f]{6}$")

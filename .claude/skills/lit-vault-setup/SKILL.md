@@ -44,16 +44,19 @@ questions at a time:
 - **Export path** — leave the default (the `Export_data` folder) if the
   export is in `Code/Export_data/`; otherwise the file's full path.
 - **Key papers** — a tag or a collection that marks the papers worth full
-  text (either or both; "" disables). Offer to list their most-used tags
-  once step 4 has run if they're unsure; they can change it later.
+  text (either or both; "" disables). The example values (`key-paper`,
+  `Key papers`) are placeholders, not Zotero conventions: ask what they
+  actually use, and if they have no such marker, say so plainly — step 4
+  then offers full text for every PDF instead. They can change it later.
 - **Reading notes vault** (optional) — do they keep reading notes in an
   Obsidian vault, one note per paper with `citekey:` in the frontmatter?
   If yes, its path and Obsidian name. If no, leave `path = ""`; everything
   still works.
-- **Highlight colours** — show the default `[highlights]` mapping and ask
-  whether it matches how they highlight. Present it as a convention, not a
-  rule; rename headings to their meaning. Keep the ⛔ emoji on whichever
-  colour holds their doubts and caveats.
+- **Highlight colours** — ask whether their highlight colours mean
+  anything. Most people's don't: then leave the default colour-name
+  headings. If some do, rename those headings in `[highlights]` to the
+  meaning (e.g. "Methods", "Doubts and caveats") — the search skill reads
+  them, and a heading that names their criticisms gets surfaced.
 - **OpenAlex email** (optional, one line) — `[openalex] mailto` joins
   OpenAlex's faster "polite pool" for the citation-gaps feature
   (`citation_gaps.py`, run after search reports). Any email works; ""
@@ -77,7 +80,16 @@ uv run python scripts/05_build_papers_json.py
 
 After `--measure`, tell the user the number of key papers and projected
 full-text size before extracting; `--tier all` (every PDF) is their call,
-not the default. Report the step-01 summary in one or two lines.
+not the default. With zero key papers, the default extracts nothing — offer
+`--tier all` (with its projected size) or setting a key tag/collection.
+
+Report the step-01 summary in one or two lines, then check the tags — the
+vault's `Tags/` notes assume manual tags are topics the user chose. From
+the `--tags-report` list, point out anything that looks otherwise: no tags
+at all (fine — search falls back to titles and abstracts), many tags on a
+single paper (often keywords an import saved as manual tags), or workflow
+tags such as `to-read`, `_inbox`, `#unread`. Offer to add those to
+`[tags] ignore` (wildcards allowed) and re-run 01 before going on.
 
 ### Optional: semantic index
 

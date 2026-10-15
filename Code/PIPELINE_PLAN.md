@@ -132,8 +132,9 @@ Body, in this order:
 3. `## My highlights` — Zotero annotations grouped by colour under the
    headings in `[highlights]` (config order; unlisted colours last, as
    "Other highlights"), each with a page-level `zotero://open-pdf` link.
-   By convention a heading starting with ⛔ holds the reader's doubts and
-   caveats; the search skill always surfaces those.
+   Headings default to Zotero's colour names; a user who gives colours a
+   meaning renames them, and the search skill always surfaces a heading
+   that names their doubts or caveats.
 4. Links: tag notes, `Fulltext/{citekey}` (if present), the main-vault note
    (if present), Zotero item and PDF, DOI.
 
@@ -176,7 +177,10 @@ behaviour flags (`--tags-report`, `--measure`, `--tier`, `--force`, …).
 **01 — build corpus.** Parses the Better BibTeX JSON export (whole library or
 one collection; a configured folder must hold exactly one `.json`)
 into one record per paper. Only manual tags (`type` absent or 0) are
-kept; automatic publisher keywords are ignored. A paper is
+kept, minus any matching `[tags] ignore`; automatic publisher keywords are
+ignored. Authors fall back to editors for edited volumes; institutional
+authors are kept whole. The year is the first plausible year anywhere in
+Zotero's free-text date. A paper is
 a key paper if it carries `key_tag` or sits in `key_collection` (including
 sub-collections). Fully rewritten every run; the export is the source of
 truth.
@@ -265,8 +269,9 @@ library**:
 - **forward** — works citing at least `min_cluster_cites` cluster papers,
   ranked the same way (follow-on work the library hasn't caught up with).
 
-Membership is decided deterministically against the full BBT export:
-normalised-DOI equality, with a normalised-title fallback only for items
+Membership is decided deterministically against the BBT export plus every
+item in `zotero.sqlite` (so a one-collection export still counts all of
+Zotero): normalised-DOI equality, with a normalised-title fallback only for items
 without a DOI (`lib/matching.py`). No LLM; ties break on global citation
 count, then OpenAlex ID. Both lists cap at `max_per_direction`.
 
@@ -310,7 +315,9 @@ touches it. A typical 15-paper cluster costs ~25–35 API calls (~10 s).
 
 `Code/config.toml`, copied from `config.example.toml` (every key documented
 there): `[zotero]` data directory, export path, key tag and collection;
-optional `[main_vault]`; `[tags]`; `[highlights]` colour → heading.
+optional `[main_vault]`; `[tags]` (related-tag count, tags to ignore);
+`[highlights]` colour → heading; optional `[openalex]` (citation gaps) and
+`[semantic]` (embedding index).
 
 ## Git and data
 

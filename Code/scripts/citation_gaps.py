@@ -10,9 +10,10 @@ works, and mines two directions:
   forward   papers CITING >= min_cluster_cites cluster papers that are not
             in the library, ranked by how many cluster papers they cite
 
-"Not in the library" is decided against the full BBT export: normalised-DOI
-comparison, with a normalised-title fallback only for items without a DOI
-(lib/matching.py). Both directions are capped at max_per_direction and
+"Not in the library" is decided against the BBT export plus every item in
+zotero.sqlite (so a one-collection export still counts the whole of
+Zotero): normalised-DOI comparison, with a normalised-title fallback only
+for items without a DOI (lib/matching.py). Both directions are capped at max_per_direction and
 tie-broken deterministically (cluster count, then global citations, then
 OpenAlex ID). No LLM anywhere.
 
@@ -55,6 +56,7 @@ from lib.openalex import (
     work_authors, work_by_title, works_by_dois, works_by_ids,
 )
 from lib.store import LOG_DIR, ROOT
+from lib.zotero_db import fetch_holdings, open_zotero_db
 
 SUMMARIES_DIR = ROOT / "Summaries"
 PAPERS_JSON = ROOT / "papers.json"
@@ -285,9 +287,19 @@ def main() -> int:
             return 1
 
         export = bbt.find_export(vault_cfg.export)
-        holdings = build_holdings(bbt.load_bibtex_export(export)["items"])
-        log.info("holdings: %d DOIs, %d titles from %s",
-                 len(holdings.dois), len(holdings.titles), export.name)
+        # The export may cover one collection; the database covers all of
+        # Zotero, so a paper held elsewhere is never reported as a gap.
+        with open_zotero_db(vault_cfg.zotero_data) as conn:
+            db_rows = fetch_holdings(conn) if conn is not None else []
+        if not db_rows:
+            notes.append("library membership checked against the export "
+                         "only (zotero.sqlite unreadable) — a paper outside "
+                         "the exported collection may be listed as missing")
+        holdings = build_holdings(bbt.load_bibtex_export(export)["items"],
+                                  extra=db_rows)
+        log.info("holdings: %d DOIs, %d titles from %s + %d database items",
+                 len(holdings.dois), len(holdings.titles), export.name,
+                 len(db_rows))
 
         backward, b_notes = backward_gaps(cluster_works, holdings, cfg, cache,
                                           args.force, log)

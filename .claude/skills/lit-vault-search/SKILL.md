@@ -70,7 +70,7 @@ description, so adapt to what is actually there.
 
 - **`papers.json`** (vault root) — the machine view of the whole library:
   one object per paper with `citekey`, `title`, `authors`,
-  `display_author` (preformatted "Gust et al."), `year`, `tags`,
+  `display_author` (preformatted "Smith et al."), `year`, `tags`,
   `key_paper`, `has_abstract`, `has_my_note`, `my_note` (link),
   `fulltext_status`, `has_annotations`, `highlight_sections` (the ###
   headings in the note), `zotero_item`, `zotero_pdf`, `doi`, and the full
@@ -89,13 +89,15 @@ description, so adapt to what is actually there.
 - **`Papers/@{citekey}.md`** — frontmatter, then `## Abstract` **on a single
   line**, then `## My highlights`, then links. Open these to read a paper's
   highlights in full; the metadata is already in `papers.json`.
-- **Highlight headings** follow the user's colour convention, set in the
-  `[highlights]` section of `Code/config.toml` (colour → heading; read it
-  once). The default is 💡 main ideas, ❔ questions, ⭐ important,
-  🧩 definitions, ⛔ weaknesses and caveats. A heading starting with ⛔
-  holds the user's own flagged doubts about a paper — always surface them
-  when using that paper. `highlight_sections` in `papers.json` says which
-  headings a note has, so only open notes that have a ⛔ or ⭐ heading.
+- **Highlight headings** come from the `[highlights]` section of
+  `Code/config.toml` (colour → heading; read it once). By default they are
+  just colour names ("Yellow highlights") and carry no meaning. If the
+  user has renamed some to say what a colour means, use that: a heading
+  that names doubts, criticisms, caveats or limitations holds their own
+  flagged doubts about a paper — always surface those when using it.
+  Comments on highlights are the user's own words in any colour, and can
+  carry the same doubts. `has_annotations` and `highlight_sections` in
+  `papers.json` say which notes have highlights at all.
 - **`Fulltext/{citekey}.md`** — plain text with `<!-- page N -->` before
   each page. N is the physical page index (what Zotero's `?page=` uses),
   not the printed page number. References are stripped. Usually only key
@@ -134,8 +136,10 @@ union. Record the candidate count, and where each candidate came from:
 `keyword`, `tag`, `semantic`, or a combination. Papers with an empty `abstract` cannot be
 judged here: list them as "unchecked" rather than silently dropping or
 keeping them. Weight papers with `✎` or highlights first, then key papers
-(`◆`). Open the `Papers/` notes of kept papers that have ⛔ or ⭐
-highlight sections, and surface ⛔ doubts. (Fallback without `papers.json`:
+(`◆`). Open the `Papers/` notes of kept papers that have highlights, and
+surface the user's doubts — from a doubts heading if their config names
+one, otherwise from comments or highlights that question the paper.
+(Fallback without `papers.json`:
 scan titles with grep on `INDEX.md`, then grep `-i "term1|term2"` over
 `Papers/` — each hit on the abstract line returns the full abstract.)
 
@@ -226,7 +230,7 @@ citation) finishes by rendering a report into the vault:
    `groups` — each with a `name`, `cards` for the anchor papers
    (`citekey`, `statement` — your one-to-two-line judgment of what it
    shows — `source` label such as `abstract` / `title` / `full text p.N` /
-   `my highlight p.N`, optional `mine` for a ⛔ doubt or annotation worth
+   `my highlight p.N`, optional `mine` for a doubt or annotation of theirs worth
    surfacing, optional `pdf_page` + `pdf_label` to deep-link the PDF
    button), and an `also` list of citekeys for the rest. Full schema in the
    renderer's docstring. `survey` is the only type for now; any other

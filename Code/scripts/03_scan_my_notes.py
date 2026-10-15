@@ -28,7 +28,7 @@ _CITEKEY_RE = re.compile(r"^citekey:\s*[\"']?([^\"'\s]+)[\"']?\s*$", re.MULTILIN
 
 def note_citekey(path: Path) -> str | None:
     try:
-        head = path.read_text(encoding="utf-8", errors="replace")[:4000]
+        head = path.read_text(encoding="utf-8-sig", errors="replace")[:4000]
     except OSError:
         return None
     if not head.startswith("---"):
@@ -74,7 +74,8 @@ def main():
             continue
         for path in sorted(base.rglob("*.md")):
             rel = path.relative_to(vault).as_posix()
-            if path in seen_files or rel.split("/")[0].lower() in excluded:
+            folders = {part.lower() for part in rel.split("/")[:-1]}
+            if path in seen_files or folders & excluded:
                 continue
             seen_files.add(path)
             ck = note_citekey(path)

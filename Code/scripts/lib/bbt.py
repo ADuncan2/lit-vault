@@ -2,11 +2,20 @@
 
 The BBT export wraps items in {"config": ..., "collections": {...}, "items": [...]}.
 Only the "Better BibTeX JSON" format is supported.
+
+Stdlib only. The doctests are the unit tests; from Code/scripts/:
+    uv run python -m lib.bbt
 """
 
 import json
 import re
 from pathlib import Path
+
+# Zotero item types that are never papers
+SKIP_ITEM_TYPES = {"note", "annotation", "attachment"}
+
+_YEAR_RE = re.compile(r"(?<!\d)(1[5-9]\d\d|20\d\d)(?!\d)")
+_LIBRARY_RE = re.compile(r"^zotero://select/(library|groups/\d+)/items/")
 
 
 def find_export(path: Path) -> Path:
@@ -69,20 +78,50 @@ def get_title(item: dict) -> str:
     return item.get("title", "Untitled")
 
 
+def _creator_name(c: dict) -> str:
+    """'Family, G.' for a person; the name as-is for a single-field
+    (institutional) creator."""
+    if c.get("name"):
+        return " ".join(c["name"].split())
+    last = (c.get("lastName") or "").strip()
+    first = (c.get("firstName") or "").strip()
+    initial = f"{first[0]}." if first else ""
+    return f"{last}, {initial}".strip(", ")
+
+
 def get_authors(item: dict) -> list[str]:
-    """Return authors as ['Family, G.', ...]."""
-    authors = []
-    for c in item.get("creators", []):
-        if c.get("creatorType", "author") == "author":
-            last = c.get("lastName", "")
-            first = c.get("firstName", "")
-            initial = f"{first[0]}." if first else ""
-            authors.append(f"{last}, {initial}".strip(", "))
-    return authors
+    """Authors as ['Family, G.', 'Some Agency', ...]. Items with no author
+    (edited volumes) fall back to their editors, then to any creator.
+
+    >>> get_authors({"creators": [
+    ...     {"creatorType": "author", "lastName": "Smith", "firstName": "Jo"},
+    ...     {"creatorType": "author", "name": "International Energy Agency"}]})
+    ['Smith, J.', 'International Energy Agency']
+    >>> get_authors({"creators": [
+    ...     {"creatorType": "editor", "lastName": "Lee", "firstName": "Al"},
+    ...     {"creatorType": "seriesEditor", "lastName": "Wu", "firstName": ""}]})
+    ['Lee, A.']
+    >>> get_authors({"creators": [{"creatorType": "contributor", "name": "IEE"}]})
+    ['IEE']
+    """
+    creators = item.get("creators", []) or []
+    for wanted in ("author", "editor", None):
+        names = [_creator_name(c) for c in creators
+                 if wanted is None or c.get("creatorType", "author") == wanted]
+        names = [n for n in names if n]
+        if names:
+            return names
+    return []
 
 
 def get_year(item: dict) -> str:
-    m = re.match(r"(\d{4})", str(item.get("date", "")))
+    """The first plausible year anywhere in Zotero's free-text date field.
+
+    >>> [get_year({"date": d}) for d in ("2021-03-15", "December 2021",
+    ...     "04/2011", "23/02/2015", "15/03/21", "")]
+    ['2021', '2021', '2011', '2015', '', '']
+    """
+    m = _YEAR_RE.search(str(item.get("date", "")))
     return m.group(1) if m else ""
 
 
@@ -111,6 +150,21 @@ def get_abstract(item: dict) -> str:
 
 def get_zotero_uri(item: dict) -> str:
     return item.get("select", "")
+
+
+def get_library(item: dict) -> str:
+    """The item's Zotero library as a link prefix: "library" (My Library)
+    or "groups/{id}", read from its zotero://select URI.
+
+    >>> get_library({"select": "zotero://select/groups/4711/items/ABCD1234"})
+    'groups/4711'
+    >>> get_library({"select": "zotero://select/library/items/ABCD1234"})
+    'library'
+    >>> get_library({})
+    'library'
+    """
+    m = _LIBRARY_RE.match(get_zotero_uri(item))
+    return m.group(1) if m else "library"
 
 
 def get_item_type(item: dict) -> str:
@@ -156,3 +210,8 @@ def collection_names(collections: dict) -> dict[str, str]:
     """Collection key -> name."""
     return {coll.get("key", key): coll.get("name", "")
             for key, coll in collections.items() if isinstance(coll, dict)}
+
+
+if __name__ == "__main__":
+    import doctest
+    raise SystemExit(doctest.testmod(verbose=True).failed)

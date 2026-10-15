@@ -1,5 +1,5 @@
 """Deterministic identity matching: DOI/title normalisation and the holdings
-set built from the full BBT export.
+set built from the BBT export and, when readable, zotero.sqlite.
 
 Used by citation_gaps.py to decide whether a paper found in the citation
 graph is already in the Zotero library. Matching is cleaning plus exact
@@ -15,9 +15,6 @@ import unicodedata
 from dataclasses import dataclass, field
 
 from . import bbt
-
-# itemTypes that are not papers (mirrors SKIP_ITEM_TYPES in 01_build_corpus.py)
-SKIP_ITEM_TYPES = {"note", "annotation", "attachment"}
 
 _DOI_PREFIX_RE = re.compile(
     r"^(?:https?://(?:dx\.)?doi\.org/|doi:)\s*", re.IGNORECASE)
@@ -75,20 +72,27 @@ class Holdings:
     titles: set = field(default_factory=set)
 
 
-def build_holdings(items: list) -> Holdings:
-    """Holdings from the FULL export item list: every item that is not a
-    note/annotation/attachment and has a title. A citekey is not required —
-    "already in Zotero" means the whole library, not just the built corpus.
+def build_holdings(items: list, extra: list = ()) -> Holdings:
+    """Holdings from the FULL export item list — every item that is not a
+    note/annotation/attachment and has a title; a citekey is not required —
+    plus `extra` (title, DOI) pairs, e.g. zotero_db.fetch_holdings(), so a
+    one-collection export still counts the rest of Zotero as held.
+
+    >>> h = build_holdings([{"itemType": "book", "title": "A", "DOI": "10.1/X"},
+    ...                     {"itemType": "note", "title": "B"}],
+    ...                    extra=[("C", ""), ("", "10.2/y")])
+    >>> sorted(h.titles), sorted(h.dois)
+    (['a', 'c'], ['10.1/x'])
     """
+    pairs = [(bbt.get_title(item), bbt.get_doi(item)) for item in items
+             if bbt.get_item_type(item) not in bbt.SKIP_ITEM_TYPES]
     h = Holdings()
-    for item in items:
-        if bbt.get_item_type(item) in SKIP_ITEM_TYPES:
-            continue
-        title = normalize_title(bbt.get_title(item))
+    for raw_title, raw_doi in [*pairs, *extra]:
+        title = normalize_title(raw_title)
         if not title or title == "untitled":
             continue
         h.titles.add(title)
-        doi = normalize_doi(bbt.get_doi(item))
+        doi = normalize_doi(raw_doi)
         if doi:
             h.dois.add(doi)
     return h

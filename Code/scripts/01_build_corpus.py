@@ -7,8 +7,9 @@ usable item and writes Code/data/corpus.jsonl, sorted by citekey. No PDF
 work happens here — abstracts come straight from the export.
 
 Only manual Zotero tags are kept; automatic publisher keywords are
-ignored. A paper is a key paper if it carries the configured key tag or
-sits in the key collection (including sub-collections).
+ignored, as are tags matching [tags] ignore. A paper is a key paper if it
+carries the configured key tag or sits in the key collection (including
+sub-collections).
 
 The corpus is cheap to build and is fully rewritten on every run — the
 export file is the source of truth. --tags-report adds papers per tag to
@@ -21,8 +22,10 @@ Usage:
 import argparse
 from collections import Counter
 from dataclasses import asdict
+from fnmatch import fnmatchcase
 
 from lib.bbt import (
+    SKIP_ITEM_TYPES,
     collection_keys_by_name,
     collection_names,
     find_export,
@@ -32,6 +35,7 @@ from lib.bbt import (
     get_collections,
     get_doi,
     get_item_type,
+    get_library,
     get_pdf_attachment,
     get_tags,
     get_title,
@@ -45,8 +49,9 @@ from lib.logutil import setup_logging
 from lib.schema import PaperRecord
 from lib.store import CORPUS_PATH, LOG_DIR, write_jsonl
 
-# Zotero item types that are never papers
-SKIP_ITEM_TYPES = {"note", "annotation", "attachment"}
+
+def is_ignored(tag: str, patterns: list[str]) -> bool:
+    return any(fnmatchcase(tag.lower(), p.lower()) for p in patterns)
 
 
 def build_record(
@@ -54,6 +59,7 @@ def build_record(
     key_tag: str,
     key_collection_keys: set[str],
     coll_names: dict[str, str],
+    ignore_tags: list[str],
     log,
 ) -> PaperRecord | None:
     item_type = get_item_type(item)
@@ -77,6 +83,7 @@ def build_record(
         (key_tag and key_tag.lower() in {t.lower() for t in tags})
         or (key_collection_keys and set(coll_keys) & key_collection_keys)
     )
+    tags = [t for t in tags if not is_ignored(t, ignore_tags)]
     pdf = get_pdf_attachment(item)
 
     return PaperRecord(
@@ -92,6 +99,7 @@ def build_record(
         key_paper=key_paper,
         abstract=" ".join(get_abstract(item).split()),
         zotero_uri=get_zotero_uri(item),
+        library=get_library(item),
         has_pdf=pdf is not None,
         pdf_key=pdf[0] if pdf else "",
         pdf_path=pdf[1] if pdf else "",
@@ -105,6 +113,8 @@ def tag_summary(records: list[dict], full: bool) -> str:
         f"  Tags:          {len(manual)} distinct, "
         f"{sum(manual.values())} assignments",
         f"  Untagged:      {untagged} papers have no tag",
+        f"  Single-paper:  {sum(1 for n in manual.values() if n == 1)} tags "
+        "are on one paper only",
     ]
     if full:
         lines.append("  Papers per tag:")
@@ -150,7 +160,7 @@ def main():
     skipped = 0
     for item in items:
         record = build_record(item, cfg.key_tag, key_collection_keys,
-                              coll_names, log)
+                              coll_names, cfg.ignore_tags, log)
         if record is None:
             skipped += 1
             continue
@@ -167,6 +177,14 @@ def main():
     write_jsonl(CORPUS_PATH, records)
 
     n_key = sum(1 for r in records if r["key_paper"])
+    if cfg.key_tag and not any(cfg.key_tag.lower() == t.lower()
+                               for it in items for t in get_tags(it)):
+        log.warning("Key tag '%s' is on no item in the export — no key "
+                    "papers by tag", cfg.key_tag)
+    if not n_key:
+        log.warning("No key papers, so step 02 will extract no full text — "
+                    "set key_tag / key_collection in config.toml, or run "
+                    "02 with --tier all")
     n_pdf = sum(1 for r in records if r["has_pdf"])
     n_no_abstract = sum(1 for r in records if not r["abstract"])
     summary = (

@@ -17,6 +17,7 @@ class PaperRecord:
     key_paper: bool = False       # key_tag or key_collection (incl. children)
     abstract: str = ""
     zotero_uri: str = ""
+    library: str = "library"      # "library" or "groups/{id}", for zotero:// links
     has_pdf: bool = False
     pdf_key: str = ""             # attachment key, for zotero://open-pdf
     pdf_path: str = ""

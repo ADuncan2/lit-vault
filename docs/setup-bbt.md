@@ -26,7 +26,9 @@ library changes, and the pipeline reads that file.
 5. Check it: *Zotero → Settings → Better BibTeX → Automatic export* should
    list the file, on change.
 
-<!-- Screenshot of the export dialog goes here: docs/img/bbt-export.png -->
+**A whole library or one collection?** The vault covers only what you
+export. Citation gaps still check your whole Zotero database, so papers
+in other collections are not listed as missing.
 
 **Citekeys** are Better BibTeX's — every vault file is named by one, so
 avoid mass re-keying once the vault is built (it works, but every note is

@@ -27,23 +27,33 @@ vault_name = ""                   # as Obsidian knows it, for obsidian:// links;
 # Folders (relative to the vault) holding literature notes. [""] scans the
 # whole vault; any note with a `citekey:` frontmatter field counts.
 lit_notes  = [""]
+# Folders (relative to the vault, at any depth) to skip.
 exclude    = ["Templates", ".obsidian", ".trash"]
 
 [tags]
 related_tags = 8                  # co-occurring tags listed per tag note
+# Manual tags that are not topics — workflow tags ("to-read"), imported
+# keywords, markers — and should get no tag note. Case-insensitive; * and ?
+# are wildcards. The key_tag above still works even if it matches here.
+#   ignore = ["to-read", "_*", "#*"]
+ignore = []
 
 # Zotero highlight colour -> heading in paper notes, in the order listed.
-# These are Zotero's default colours with a suggested meaning for each —
-# a convention, not a requirement. Rename the headings to match how you
-# highlight. Keep the ⛔ emoji on whichever heading holds your doubts and
-# caveats: the search skill always surfaces those when it uses a paper.
-# Colours not listed here still appear, under "Other highlights".
+# These are Zotero 7's eight colours. If your colours mean something,
+# rename the headings to say so (e.g. "Methods", "Doubts and caveats") —
+# the search skill reads the headings, so a heading that names your
+# criticisms gets those surfaced whenever a paper is used. If they don't,
+# leave the colour names. Colours not listed still appear, under "Other
+# highlights".
 [highlights]
-"#5fb236" = "💡 Main ideas, contributions and conclusions"   # green
-"#2ea8e5" = "❔ Questions"                                     # blue
-"#ffd400" = "⭐ Important"                                     # yellow
-"#a28ae5" = "🧩 Definitions and concepts"                     # purple
-"#ff6666" = "⛔ Weaknesses and caveats"                       # red
+"#ffd400" = "Yellow highlights"
+"#ff6666" = "Red highlights"
+"#5fb236" = "Green highlights"
+"#2ea8e5" = "Blue highlights"
+"#a28ae5" = "Purple highlights"
+"#e56eee" = "Magenta highlights"
+"#f19837" = "Orange highlights"
+"#aaaaaa" = "Grey highlights"
 
 # Optional: a semantic (embedding) index over Fulltext/, so search can find
 # pages by meaning, not just by the words used. Needs Ollama running locally

@@ -94,7 +94,7 @@ def _get_json(url: str, cfg: OpenAlexConfig):
         time.sleep(cfg.delay if attempt == 0 else 0)
         try:
             req = urllib.request.Request(url, headers={
-                "User-Agent": "lit-vault citation_gaps (https://github.com/; stdlib urllib)"})
+                "User-Agent": "lit-vault citation_gaps (https://github.com/ADuncan2/lit-vault)"})
             with urllib.request.urlopen(req, timeout=cfg.timeout) as resp:
                 return json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:

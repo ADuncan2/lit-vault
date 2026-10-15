@@ -107,7 +107,8 @@ def tag_link(tag: str, ctx: dict) -> str:
 # Paper notes
 # ---------------------------------------------------------------------------
 
-def render_highlights(anns: list[dict], headings: dict[str, str]) -> list[str]:
+def render_highlights(anns: list[dict], headings: dict[str, str],
+                      library: str) -> list[str]:
     """Group by colour under the [highlights] headings, in config order;
     unmapped colours follow as "Other highlights"."""
     by_color: dict[str, list[dict]] = {}
@@ -122,7 +123,7 @@ def render_highlights(anns: list[dict], headings: dict[str, str]) -> list[str]:
     for heading, group in groups:
         lines += [f"### {heading}", ""]
         for ann in group:
-            url = f"zotero://open-pdf/library/items/{ann['att_key']}"
+            url = f"zotero://open-pdf/{library}/items/{ann['att_key']}"
             params = []
             if ann.get("page"):
                 params.append(f"page={ann['page']}")
@@ -144,7 +145,8 @@ def render_paper(r: dict, ctx: dict) -> str:
     anns = ctx["annotations"].get(ck, [])
     note = ctx["my_notes"].get(ck)
     status = ctx["status"][ck]
-    pdf_url = (f"zotero://open-pdf/library/items/{r['pdf_key']}"
+    library = r.get("library", "library")
+    pdf_url = (f"zotero://open-pdf/{library}/items/{r['pdf_key']}"
                if r["pdf_key"] else None)
 
     fm = frontmatter({
@@ -174,7 +176,8 @@ def render_paper(r: dict, ctx: dict) -> str:
     lines = [fm, "", f"# {title}", "", "## Abstract", "",
              r["abstract"] or "*No abstract in Zotero.*", "",
              "## My highlights", ""]
-    lines += render_highlights(anns, ctx["highlights"]) if anns else ["*No highlights.*", ""]
+    lines += (render_highlights(anns, ctx["highlights"], library) if anns
+              else ["*No highlights.*", ""])
 
     lines += ["## Links", ""]
     if r["tags"]:

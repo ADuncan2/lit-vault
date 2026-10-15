@@ -35,7 +35,7 @@ from lib.semantic import (
     open_index,
     read_meta,
 )
-from lib.store import MANIFEST_PATH, read_json
+from lib.store import CORPUS_PATH, read_jsonl
 
 
 def emit(obj: dict) -> None:
@@ -124,8 +124,9 @@ def main():
         exclude = ck
 
     scores = matrix @ qvec
-    pdf_keys = {ck: e.get("pdf_key", "")
-                for ck, e in (read_json(MANIFEST_PATH, {}) or {}).items()}
+    pdf_urls = {r["citekey"]: f"zotero://open-pdf/{r.get('library', 'library')}"
+                              f"/items/{r['pdf_key']}"
+                for r in read_jsonl(CORPUS_PATH) if r.get("pdf_key")}
     per_paper: dict[str, int] = {}
     n = 0
     for i in np.argsort(-scores):
@@ -137,11 +138,10 @@ def main():
             continue
         per_paper[r["citekey"]] = per_paper.get(r["citekey"], 0) + 1
         n += 1
-        key = pdf_keys.get(r["citekey"])
+        url = pdf_urls.get(r["citekey"])
         emit({"citekey": r["citekey"], "page": r["page"], "part": r["part"],
               "score": round(score, 4), "preview": r["preview"],
-              "zotero_pdf_page": (f"zotero://open-pdf/library/items/{key}?page={r['page']}"
-                                  if key else None)})
+              "zotero_pdf_page": f"{url}?page={r['page']}" if url else None})
 
 
 if __name__ == "__main__":

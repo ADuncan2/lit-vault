@@ -12,16 +12,19 @@ from .store import CODE_DIR
 
 CONFIG_PATH = CODE_DIR / "config.toml"
 
-# Zotero's default highlight palette -> heading in paper notes. The default
-# convention; override per colour in [highlights]. A heading starting with
-# ⛔ marks the reader's own doubts, which the search skill always surfaces.
+# Zotero 7's highlight palette -> heading in paper notes. Neutral colour
+# names by default; [highlights] renames them to what each colour means.
 DEFAULT_HIGHLIGHTS = {
-    "#5fb236": "💡 Main ideas, contributions and conclusions",
-    "#2ea8e5": "❔ Questions",
-    "#ffd400": "⭐ Important",
-    "#a28ae5": "🧩 Definitions and concepts",
-    "#ff6666": "⛔ Weaknesses and caveats",
+    "#ffd400": "Yellow highlights",
+    "#ff6666": "Red highlights",
+    "#5fb236": "Green highlights",
+    "#2ea8e5": "Blue highlights",
+    "#a28ae5": "Purple highlights",
+    "#e56eee": "Magenta highlights",
+    "#f19837": "Orange highlights",
+    "#aaaaaa": "Grey highlights",
 }
+DEFAULT_EXCLUDE = ["Templates", ".obsidian", ".trash"]
 
 
 @dataclass
@@ -33,8 +36,9 @@ class Config:
     main_vault: Path | None = None
     vault_name: str = ""
     lit_notes: list[str] = field(default_factory=lambda: [""])
-    exclude: list[str] = field(default_factory=list)
+    exclude: list[str] = field(default_factory=lambda: list(DEFAULT_EXCLUDE))
     related_tags: int = 8
+    ignore_tags: list[str] = field(default_factory=list)
     highlights: dict[str, str] = field(default_factory=lambda: dict(DEFAULT_HIGHLIGHTS))
 
 
@@ -66,7 +70,8 @@ def load_config(path: Path = CONFIG_PATH) -> Config:
         main_vault=Path(vault_path) if vault_path else None,
         vault_name=mv.get("vault_name", ""),
         lit_notes=lit_notes,
-        exclude=mv.get("exclude", []),
+        exclude=mv.get("exclude", DEFAULT_EXCLUDE),
         related_tags=int(tags.get("related_tags", 8)),
+        ignore_tags=list(tags.get("ignore", [])),
         highlights=highlights,
     )
