@@ -79,6 +79,9 @@ max_forward_pages = 50    # cap on citing-works pages fetched (200 works each)
 [semantic]
 ollama_url   = "http://localhost:11434"
 embed_model  = "nomic-embed-text"   # pinned; its digest is recorded in the index
+embed_abstracts = true              # also embed every abstract, so the free
+                                    # search UI (serve_search.py) can match
+                                    # papers without extracted full text
 doc_prefix   = "search_document: "  # nomic's task prefixes; "" for other models
 query_prefix = "search_query: "
 max_words    = 1000                 # split pages longer than this

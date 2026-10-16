@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Search report template (deterministic semantic search, no LLM), rendered by Code/scripts/render_report.py into
+   lit-vault.html (rewritten each run; bookmark it) and a frozen copy in Summaries/. Placeholders are double-braced upper-case names. */
+:root {
+  --bg: #f6f7f8;
+  --surface: #ffffff;
+  --fg: #1c2328;
+  --muted: #5b6770;
+  --line: #dde2e6;
+  --accent: #0f5f6b;
+  --accent-soft: #e2f0f1;
+  --flag: #9a5b00;
+  --flag-soft: #fbf0dc;
+  --f-display: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --bg: #12171a; --surface: #1a2125; --fg: #e3e8eb; --muted: #97a4ad; --line: #2c363c;
+  --accent: #6cc3cd; --accent-soft: #173238; --flag: #e8b45c; --flag-soft: #3a2c14; color-scheme: dark; } }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 15px; line-height: 1.55; margin: 0; }
+.wrap { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 32px 56px; display: grid; gap: 32px; }
+header { display: grid; gap: 8px; }
+.run { font-family: var(--f-mono); font-size: .76rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+h1 { font-family: var(--f-display); font-weight: 600; font-size: 1.9rem; line-height: 1.2; margin: 0; text-wrap: balance; }
+.lede { color: var(--muted); margin: 0; max-width: 62ch; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .82rem; color: var(--muted); margin: 0; padding: 0; list-style: none; }
+.legend b { font-weight: 600; color: var(--fg); }
+.reports { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: .82rem; color: var(--muted); }
+.reports label { font-family: var(--f-mono); font-size: .76rem; text-transform: uppercase; letter-spacing: .06em; }
+.reports select { font: 500 .85rem/1.3 var(--f-body); color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 5px 8px; max-width: 100%; min-width: 0; flex: 1 1 260px; }
+.reports select:focus-visible, .reports a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.reports a { color: var(--accent); text-decoration: none; font-weight: 500; }
+.reports a:hover { text-decoration: underline; }
+
+section { display: grid; gap: 12px; }
+h2 { font-family: var(--f-body); font-size: .76rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+
+.paper { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; display: grid; gap: 6px; min-width: 0; }
+.cite { font-size: .85rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.cite .who { color: var(--fg); font-weight: 500; }
+.key { font-family: var(--f-mono); font-size: .78rem; overflow-wrap: anywhere; }
+.title { font-family: var(--f-display); font-size: 1.08rem; font-weight: 600; line-height: 1.35; margin: 0; }
+.what { margin: 0; max-width: 68ch; }
+.src { font-family: var(--f-mono); font-size: .74rem; color: var(--muted); white-space: nowrap; }
+.srclist { margin: 0; padding-left: 1.3em; font-family: var(--f-mono); font-size: .74rem; color: var(--muted); overflow-wrap: anywhere; display: grid; gap: 2px; }
+.mine { margin: 0; font-size: .9rem; color: var(--muted); font-style: italic; }
+.chips { display: inline-flex; gap: 4px; }
+.chip { font-size: .7rem; font-weight: 600; letter-spacing: .03em; padding: 1px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.chip.flag { background: var(--flag-soft); color: var(--flag); }
+
+.actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.actions a {
+  font: 500 .8rem/1 var(--f-body); padding: 7px 11px; border-radius: 4px;
+  border: 1px solid var(--line); background: transparent; color: var(--fg); text-decoration: none;
+}
+.actions a.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.actions a:hover { border-color: var(--accent); }
+.actions a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.note { background: var(--surface); border: 1px dashed var(--line); border-radius: 6px; padding: 12px 16px; font-size: .88rem; color: var(--muted); }
+.note p { margin: 0; }
+.note p + p { margin-top: 6px; }
+.more { margin: 0; padding-left: 18px; font-size: .88rem; color: var(--muted); display: grid; gap: 3px; }
+.more a { color: var(--accent); }
+.toc { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 12px 16px; font-size: .9rem; }
+.toc h2 { border: 0; padding: 0; margin-bottom: 6px; }
+.toc ol { margin: 0; padding-left: 20px; display: grid; gap: 3px; }
+.toc a { color: var(--fg); text-decoration: none; }
+.toc a:hover { color: var(--accent); text-decoration: underline; }
+.toc .n { font-family: var(--f-mono); font-size: .74rem; color: var(--muted); }
+.toc a:focus-visible, .top:focus-visible, .abs summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+html { scroll-behavior: smooth; }
+section { scroll-margin-top: 12px; }
+.top { justify-self: end; font-size: .78rem; color: var(--muted); text-decoration: none; }
+.top:hover { color: var(--accent); }
+
+.abs { font-size: .88rem; }
+.abs summary { cursor: pointer; width: fit-content; font-size: .8rem; font-weight: 500; color: var(--accent); }
+.abs p { margin: 6px 0 0; max-width: 68ch; color: var(--fg); }
+.more .abs { margin: 2px 0 4px; }
+.more .abs p { color: var(--muted); }
+body[data-page="latest"] .archived-only, body[data-page="archived"] .latest-only { display: none; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } html { scroll-behavior: auto; } }
+</style>
+</head>
+<body data-page="{{PAGE_KIND}}">
+<div class="wrap" id="top">
+  {{NAV}}
+  <header>
+    <p class="run">{{TYPE}} · generated {{GENERATED}}</p>
+    <h1>{{TOPIC}}</h1>
+    <p class="lede">{{LEDE}}</p>
+    <ul class="legend">
+      <li><b>Key</b> key paper</li>
+      <li><b>Note</b> you have a reading note</li>
+      <li><b>Full text</b> extracted in the vault</li>
+      <li><span class="src">[full text p.N &middot; 0.78]</span> / <span class="src">[abstract &middot; 0.74]</span> where the best match was found, and its similarity to the query</li>
+    </ul>
+  </header>
+
+  <nav class="toc" aria-label="Contents">
+    <h2>Contents</h2>
+    <ol>
+{{TOC}}
+    </ol>
+  </nav>
+
+{{SECTIONS}}
+
+  <div class="note">
+    <p>Scores are cosine similarities from a local embedding model — leads to open and read, never statements of what a paper shows. No language model wrote anything on this page.</p>
+    <p>Zotero desktop must be running (or it will be launched) for the links to work.</p>
+    <p class="latest-only">This page is rewritten by each lit search; an open tab reloads itself when you switch back to it. Earlier reports are kept in Summaries/ and listed in the menu at the top.</p>
+    <p class="archived-only">This is an archived report, frozen as rendered.</p>
+    <p>{{FOOTER_NOTE}}</p>
+  </div>
+</div>
+
+<script>
+// Latest page only: reload when the tab regains focus, so an open tab always shows the
+// latest report. Throttled so it doesn't reload mid-read on quick window switches.
+(function () {
+  if (document.body.dataset.page !== 'latest') return;
+  var last = Date.now();
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible' && Date.now() - last > 60000) {
+      location.reload();
+    }
+    last = Date.now();
+  });
+})();
+</script>
+</body>
+</html>

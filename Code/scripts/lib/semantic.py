@@ -48,6 +48,9 @@ class SemanticConfig:
     min_score: float = 0.45
     per_paper: int = 3
     batch: int = 16
+    # Also embed every abstract from the corpus (for semantic_report.py /
+    # serve_search.py, which search papers without full text too).
+    embed_abstracts: bool = True
 
 
 def load_semantic_config(path: Path = CONFIG_PATH) -> SemanticConfig:
@@ -259,6 +262,13 @@ CREATE TABLE IF NOT EXISTS chunks (
     embedding  BLOB NOT NULL,
     PRIMARY KEY (citekey, page, part)
 );
+CREATE TABLE IF NOT EXISTS abstracts (
+    citekey       TEXT PRIMARY KEY,
+    abstract_hash TEXT NOT NULL,
+    word_count    INTEGER NOT NULL,
+    preview       TEXT NOT NULL,
+    embedding     BLOB NOT NULL
+);
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
 """
 
@@ -299,6 +309,25 @@ def delete_paper(conn: sqlite3.Connection, citekey: str) -> None:
     conn.execute("DELETE FROM chunks WHERE citekey = ?", (citekey,))
 
 
+def indexed_abstracts(conn: sqlite3.Connection) -> dict[str, str]:
+    """citekey -> abstract_hash of what is in the index."""
+    return dict(conn.execute("SELECT citekey, abstract_hash FROM abstracts"))
+
+
+def replace_abstract(conn: sqlite3.Connection, citekey: str,
+                     abstract_hash: str, text: str, vector) -> None:
+    preview = " ".join(text.split())[:PREVIEW_CHARS]
+    conn.execute(
+        "INSERT OR REPLACE INTO abstracts VALUES (?, ?, ?, ?, ?)",
+        (citekey, abstract_hash, len(text.split()), preview,
+         vector.astype("float32").tobytes()),
+    )
+
+
+def delete_abstract(conn: sqlite3.Connection, citekey: str) -> None:
+    conn.execute("DELETE FROM abstracts WHERE citekey = ?", (citekey,))
+
+
 def load_matrix(conn: sqlite3.Connection):
     """(rows, matrix): rows are dicts without the embedding, in matrix order."""
     import numpy as np
@@ -308,6 +337,19 @@ def load_matrix(conn: sqlite3.Connection):
             "FROM chunks ORDER BY citekey, page, part"):
         rows.append({"citekey": ck, "page": page, "part": part,
                      "word_count": wc, "preview": preview})
+        blobs.append(np.frombuffer(blob, dtype=np.float32))
+    matrix = np.vstack(blobs) if blobs else np.zeros((0, 0), dtype=np.float32)
+    return rows, matrix
+
+
+def load_abstract_matrix(conn: sqlite3.Connection):
+    """(rows, matrix) over the abstracts table, in matrix order."""
+    import numpy as np
+    rows, blobs = [], []
+    for ck, wc, preview, blob in conn.execute(
+            "SELECT citekey, word_count, preview, embedding "
+            "FROM abstracts ORDER BY citekey"):
+        rows.append({"citekey": ck, "word_count": wc, "preview": preview})
         blobs.append(np.frombuffer(blob, dtype=np.float32))
     matrix = np.vstack(blobs) if blobs else np.zeros((0, 0), dtype=np.float32)
     return rows, matrix

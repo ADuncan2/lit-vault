@@ -1,8 +1,9 @@
 """citation_gaps.py — find papers a summary's cluster points at that are
 missing from the Zotero library, via the OpenAlex citation graph.
 
-Not a build step: run it after lit-vault-search has archived a survey. It
-takes the cluster (every citekey the survey cites), resolves it to OpenAlex
+Not a build step: run it after lit-vault-search has archived a survey (or
+semantic_report.py a search report — both carry citekeys in "groups"). It
+takes the cluster (every citekey the report cites), resolves it to OpenAlex
 works, and mines two directions:
 
   backward  papers the cluster REFERENCES that are not in the library,
@@ -31,7 +32,8 @@ Usage:
     uv run python scripts/citation_gaps.py [SUMMARY_JSON]
         [--check] [--measure] [--force] [--no-render]
 
-SUMMARY_JSON defaults to the newest Summaries/*--survey--*.json.
+SUMMARY_JSON defaults to the newest Summaries/*--survey--*.json or
+*--search--*.json.
 --check    capability check only (is OpenAlex reachable?); exit 0
 --measure  run the analysis and print what it found, but write nothing
 --force    ignore the metadata cache TTL; refetch everything touched
@@ -65,8 +67,9 @@ GAPS_SCHEMA = 1
 
 
 def newest_survey(summaries: Path = SUMMARIES_DIR) -> Path | None:
-    """Newest archived survey JSON; the date prefix makes stems sort."""
-    found = [p for p in summaries.glob("*--survey--*.json") if p.is_file()]
+    """Newest archived survey or search JSON; the date prefix makes stems sort."""
+    found = [p for pat in ("*--survey--*.json", "*--search--*.json")
+             for p in summaries.glob(pat) if p.is_file()]
     return max(found, key=lambda p: (p.stem, p.stat().st_mtime), default=None)
 
 
@@ -219,7 +222,7 @@ def main() -> int:
         description="Find papers a summary's cluster cites or is cited by "
                     "that are missing from the Zotero library (OpenAlex)")
     ap.add_argument("summary", nargs="?", type=Path,
-                    help="archived survey JSON (default: newest in Summaries/)")
+                    help="archived survey/search JSON (default: newest in Summaries/)")
     ap.add_argument("--check", action="store_true",
                     help="capability check only; exit 0 either way")
     ap.add_argument("--measure", action="store_true",
@@ -253,10 +256,13 @@ def main() -> int:
         print("error: no archived survey found — run a lit-vault search "
               "first, or pass the Summaries/*.json path", file=sys.stderr)
         return 1
+    # the re-render subprocess runs with cwd=ROOT, so a path relative to
+    # the caller's directory must be pinned down first
+    summary = summary.resolve()
     review = json.loads(summary.read_text(encoding="utf-8"))
-    if review.get("type") != "survey":
+    if review.get("type") not in ("survey", "search"):
         print(f"error: {summary.name} is a {review.get('type')!r} report — "
-              "citation gaps work on surveys", file=sys.stderr)
+              "citation gaps work on surveys and searches", file=sys.stderr)
         return 1
     papers_data = json.loads(PAPERS_JSON.read_text(encoding="utf-8")) \
         if PAPERS_JSON.exists() else None

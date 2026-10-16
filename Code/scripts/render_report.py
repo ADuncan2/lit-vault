@@ -31,8 +31,8 @@ and topic gets -2, -3, … The dropdown is built by scanning the archived
 .json files (newest first, label "YYYY-MM-DD · type · topic") and uses
 plain navigation, never fetch(), so it works from file://.
 
-Supported types: survey (schema 1). An unknown type or schema fails with a
-message naming the supported ones.
+Supported types: survey (schema 1) and search (schema 1). An unknown type or
+schema fails with a message naming the supported ones.
 
 review.json schema, type "survey" (all strings are plain text — the script
 escapes them):
@@ -65,6 +65,32 @@ escapes them):
                                        # it. Schema in scripts/citation_gaps.py.
 }
 
+review.json schema, type "search" (written deterministically by
+semantic_report.py — no LLM; cards carry a similarity score and the
+best-matching location instead of a statement):
+{
+  "schema": 1, "type": "search",
+  "topic":  "the query as typed",
+  "lede":   "what was searched and with which settings",
+  "params": { ... },                   # kept for reproducibility; not rendered
+  "groups": [
+    {
+      "name": "Matched in full text",  # or "Matched on the abstract"
+      "cards": [
+        {
+          "citekey": "smithExampleCitekey2024",
+          "score":   0.78,             # cosine similarity of the best hit
+          "match":   "fulltext",       # or "abstract"
+          "page":    12, "part": 1,    # fulltext matches only
+          "excerpt": "preview of the best-matching chunk",   # fulltext only
+          "pdf_page": 12               # optional: deep-link the PDF button
+        }
+      ]
+    }
+  ],
+  "gaps": { ... }                      # optional, as for surveys
+}
+
 Usage:
     python Code/scripts/render_report.py review.json [-o lit-vault.html]
                                          [--papers papers.json]
@@ -86,6 +112,12 @@ VAULT = Path(__file__).resolve().parents[2]
 TEMPLATES = VAULT / "Code" / "templates"
 ARCHIVE_DIR = "Summaries"
 SCHEMA = 1
+
+LEDE_TAIL = (
+    ' "Open in Zotero" selects the item; "PDF" opens the reader, at the'
+    " flagged page where there is one. The first click may ask to open"
+    ' Zotero — tick "always allow".'
+)
 
 
 def esc(s) -> str:
@@ -329,15 +361,10 @@ def render_survey(review: dict, papers: dict, now: datetime.datetime) -> tuple:
         sections.append(gaps_section)
         toc.append(gaps_toc)
 
-    lede_tail = (
-        ' "Open in Zotero" selects the item; "PDF" opens the reader, at the'
-        " flagged page where there is one. The first click may ask to open"
-        ' Zotero — tick "always allow".'
-    )
     footer = (f"Built from the literature vault on {now.strftime('%d %b %Y')} "
               f"({len(papers):,} papers in the library; {n_total} in this review).")
     values = {
-        "LEDE": esc(review["lede"]) + lede_tail,
+        "LEDE": esc(review["lede"]) + LEDE_TAIL,
         "TOC": "\n".join(toc),
         "SECTIONS": "\n\n".join(sections),
         "FOOTER_NOTE": esc(footer),
@@ -347,9 +374,85 @@ def render_survey(review: dict, papers: dict, now: datetime.datetime) -> tuple:
     return values, summary
 
 
+# -- search (deterministic semantic search, written by semantic_report.py) --
+
+def validate_search(review: dict, papers: dict) -> list:
+    errors, seen = [], set()
+    for g in review.get("groups", []):
+        for c in g.get("cards", []):
+            k = c.get("citekey")
+            if k not in papers:
+                errors.append(f"unknown citekey (not in papers.json): {k!r}")
+            if k in seen:
+                errors.append(f"{k}: listed more than once")
+            seen.add(k)
+            if not isinstance(c.get("score"), (int, float)):
+                errors.append(f"card {k}: missing or non-numeric score")
+            if c.get("match") not in ("fulltext", "abstract"):
+                errors.append(f"card {k}: match must be 'fulltext' or 'abstract'")
+            if c.get("match") == "fulltext" and not c.get("page"):
+                errors.append(f"card {k}: fulltext match without a page")
+    if review.get("gaps"):
+        errors.extend(validate_gaps_block(review["gaps"], papers))
+    return errors
+
+
+def render_search_card(card: dict, p: dict) -> str:
+    score = f"{card['score']:.2f}"
+    if card["match"] == "fulltext":
+        srclab = f"[full text p.{card['page']} · {score}]"
+        what = (f'Best-matching page: “{esc(card.get("excerpt", ""))}…” '
+                f'<span class="src">{esc(srclab)}</span>')
+    else:
+        srclab = f"[abstract · {score}]"
+        what = f'Matched on the abstract. <span class="src">{esc(srclab)}</span>'
+    return f'''    <article class="paper">
+      <div class="cite"><span class="who">{who_year(p)}</span><span class="key">{esc(p["citekey"])}</span><span class="chips">{chips(p)}</span></div>
+      <h3 class="title">{esc(p.get("title", ""))}</h3>
+      <p class="what">{what}</p>
+      {abstract_block(p)}
+      <div class="actions">
+        {actions(p, card)}
+      </div>
+    </article>'''
+
+
+def render_search(review: dict, papers: dict, now: datetime.datetime) -> tuple:
+    """Return (placeholder values, one-line summary)."""
+    sections, toc = [], []
+    n_total = 0
+    for i, g in enumerate(review["groups"], 1):
+        sid = f"s{i}-{slugify(g['name'], 40)}"
+        cards = g.get("cards", [])
+        toc.append(f'      <li><a href="#{sid}">{esc(g["name"])}</a>'
+                   f' <span class="n">{len(cards)}</span></li>')
+        parts = [f'  <section id="{sid}">\n    <h2>{esc(g["name"])}</h2>\n']
+        parts.extend(render_search_card(c, papers[c["citekey"]]) for c in cards)
+        n_total += len(cards)
+        parts.append('    <a class="top" href="#top">↑ contents</a>\n  </section>')
+        sections.append("\n\n".join(parts))
+
+    if review.get("gaps"):
+        gaps_section, gaps_toc = render_gaps_section(review["gaps"])
+        sections.append(gaps_section)
+        toc.append(gaps_toc)
+
+    footer = (f"Searched the literature vault on {now.strftime('%d %b %Y')} "
+              f"({len(papers):,} papers in the library; {n_total} matched).")
+    values = {
+        "LEDE": esc(review["lede"]) + LEDE_TAIL,
+        "TOC": "\n".join(toc),
+        "SECTIONS": "\n\n".join(sections),
+        "FOOTER_NOTE": esc(footer),
+    }
+    summary = f"{len(review['groups'])} sections, {n_total} papers"
+    return values, summary
+
+
 # type -> (validate, render); a new type is a template plus an entry here
 TYPES = {
     "survey": (validate_survey, render_survey),
+    "search": (validate_search, render_search),
 }
 
 

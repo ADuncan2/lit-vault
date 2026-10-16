@@ -69,6 +69,41 @@ Hits are leads to open in `Fulltext/`, never evidence in themselves.
 Without Ollama both scripts print one status line and exit 0, and the
 vault builds identically.
 
+Unless `embed_abstracts = false` in `[semantic]`, step 06 also embeds every
+abstract in the library (one vector per paper, incremental), so the free
+search below can match papers whose full text isn't extracted.
+
+### Free search UI (no LLM)
+
+A deterministic alternative to the LLM-driven search skill — retrieval
+only, completely free and offline:
+
+```sh
+uv run python scripts/serve_search.py        # opens http://127.0.0.1:8787/search
+```
+
+Type a question, set the score threshold and paper cap, submit: the query
+is embedded through local Ollama, cosine-compared against every indexed
+full-text page and abstract, and the top papers (grouped by whether the
+best match was a full-text page or the abstract) are rendered through the
+same report template as the surveys — archived in `Summaries/`, with the
+stable `lit-vault.html` rewritten. Full-text matches deep-link the PDF at
+the best-matching page. Ticking "gap analysis" runs `citation_gaps.py` on
+the result as usual (that part needs the network).
+
+No language model is involved, so the report ranks and quotes, but cannot
+summarise: scores are cosine similarities ("near the query in embedding
+space"), never statements of what a paper shows. Exact-term queries
+(acronyms, author names) match less reliably than with the keyword funnel
+the search skill uses.
+
+The same search works headless:
+
+```sh
+uv run python scripts/semantic_report.py --query "..." [--min-score 0.6]
+    [--max-papers 30] [--scope both|fulltext|abstracts] [--gaps]
+```
+
 **Calibrating.** `min_score` in `[semantic]` drops weak hits. The default
 (0.45) is permissive — `nomic-embed-text` scores mostly fall between 0.70
 and 0.80. Try a few questions whose right papers you know, note the scores
